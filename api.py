@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
 
 import httpx
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -94,9 +94,37 @@ class Campaign(BaseModel):
     niche: str = Field(min_length=1, max_length=60)
     budget: float = Field(gt=0, le=100_000_000)
     currency: str = Field(default="EUR", max_length=8)
+    image_url: str | None = Field(default=None, max_length=500)
 
 class ApplicationRequest(BaseModel):
     message: str = Field(default="", max_length=1000)
+
+@app.post("/api/upload-image")
+async def upload_image(request: Request, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    content_type = request.headers.get("content-type", "").split(";")[0].lower()
+    allowed = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+    if content_type not in allowed:
+        raise HTTPException(400, "Загрузи JPG, PNG или WEBP")
+    body = await request.body()
+    if not body or len(body) > 5 * 1024 * 1024:
+        raise HTTPException(400, "Размер изображения должен быть до 5 МБ")
+    filename = f"{telegram_id}/{int(time.time())}.{allowed[content_type]}"
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(503, "Supabase пока не настроен на сервере")
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": content_type,
+        "x-upsert": "true",
+    }
+    async with httpx.AsyncClient(timeout=30) as client:
+        response = await client.post(
+            f"{SUPABASE_URL}/storage/v1/object/campaign-images/{filename}",
+            headers=headers, content=body
+        )
+    if response.is_error:
+        raise HTTPException(502, "Не удалось загрузить фото. Проверь хранилище campaign-images в Supabase")
+    return {"image_url": f"{SUPABASE_URL}/storage/v1/object/public/campaign-images/{filename}"}
 
 @app.get("/health")
 async def health():
@@ -119,7 +147,7 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
 @app.get("/api/campaigns")
 async def campaigns():
     return await db_request("GET", "campaigns", params={
-        "select": "id,advertiser_id,title,description,niche,budget,currency,status,created_at",
+        "select": "id,advertiser_id,title,description,niche,budget,currency,image_url,status,created_at",
         "status": "eq.open", "order": "created_at.desc",
     })
 
