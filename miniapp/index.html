@@ -220,10 +220,49 @@
     try{await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});notify('Отклик отправлен!');}
     catch(err){notify(err.message);}
   }
-  async function buyPro(asset){try{const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('proStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkPro(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
-  async function checkPro(id){try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! PRO активен 30 дней.');document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
-  async function buyBusiness(asset){try{const r=await api('/api/business/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('businessStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkBusiness(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
-  async function checkBusiness(id){try{const r=await api('/api/business/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! Business активен на 30 дней.');document.getElementById('businessStatus').textContent='Business активен до '+r.expires_at;document.getElementById('proStatus').textContent='Доступ Business включает возможности PRO.';}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
+  function renderInvoiceStatus(statusId, plan, invoice){
+    const box=document.getElementById(statusId);
+    box.textContent='';
+    const message=document.createElement('div');
+    message.textContent='Счёт создан. Открой оплату по ссылке ниже, затем вернись сюда.';
+    const link=document.createElement('a');
+    link.href=invoice.pay_url;
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.textContent='Открыть Crypto Pay';
+    link.style.cssText='display:inline-block;margin:9px 8px 0 0;padding:10px 14px;border-radius:10px;background:#258bff;color:#061426;font-weight:800;text-decoration:none';
+    const check=document.createElement('button');
+    check.type='button';check.className='small-btn';check.textContent='Проверить оплату';
+    check.onclick=()=>plan==='pro'?checkPro(invoice.invoice_id):checkBusiness(invoice.invoice_id);
+    box.append(message,document.createElement('br'),link,check);
+  }
+  async function buyPro(asset){
+    const box=document.getElementById('proStatus');
+    box.textContent='Создаю счёт Crypto Pay…';
+    try{
+      const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});
+      if(!r.pay_url)throw new Error('Сервер создал счёт, но не вернул ссылку оплаты. Обратись к поддержке.');
+      renderInvoiceStatus('proStatus','pro',r);
+    }catch(e){box.textContent='Ошибка оплаты: '+e.message;notify('Не удалось создать счёт: '+e.message);}
+  }
+  async function checkPro(id){
+    const box=document.getElementById('proStatus');box.textContent='Проверяю платёж…';
+    try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){box.textContent='PRO активен до '+r.expires_at;notify('Оплата подтверждена! PRO активен 30 дней.');}else{box.textContent='Платёж пока не найден. Если оплатил — подожди немного и проверь снова.';}}
+    catch(e){box.textContent='Ошибка проверки: '+e.message;notify(e.message);}
+  }
+  async function buyBusiness(asset){
+    const box=document.getElementById('businessStatus');box.textContent='Создаю счёт Crypto Pay…';
+    try{
+      const r=await api('/api/business/create-invoice',{method:'POST',body:JSON.stringify({asset})});
+      if(!r.pay_url)throw new Error('Сервер создал счёт, но не вернул ссылку оплаты. Обратись к поддержке.');
+      renderInvoiceStatus('businessStatus','business',r);
+    }catch(e){box.textContent='Ошибка оплаты: '+e.message;notify('Не удалось создать счёт: '+e.message);}
+  }
+  async function checkBusiness(id){
+    const box=document.getElementById('businessStatus');box.textContent='Проверяю платёж…';
+    try{const r=await api('/api/business/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){box.textContent='Business активен до '+r.expires_at;document.getElementById('proStatus').textContent='Доступ Business включает возможности PRO.';notify('Оплата подтверждена! Business активен на 30 дней.');}else{box.textContent='Платёж пока не найден. Если оплатил — подожди немного и проверь снова.';}}
+    catch(e){box.textContent='Ошибка проверки: '+e.message;notify(e.message);}
+  }
   async function loadPro(){try{const r=await api('/api/pro/status');if(r.plan==='business'){document.getElementById('businessStatus').textContent=r.admin?'Business активен для твоего аккаунта @verpot — бесплатно (админ-доступ).':'Business активен.';document.getElementById('proStatus').textContent='Доступ Business включает возможности PRO.';}else if(r.active){document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}}catch(e){}}
   async function loadMyProfile(){
     try{
@@ -245,10 +284,6 @@
 
   window.buyPro = buyPro;
   window.buyBusiness = buyBusiness;
-  document.getElementById('buyProUsdt')?.addEventListener('click', () => buyPro('USDT'));
-  document.getElementById('buyProTon')?.addEventListener('click', () => buyPro('TON'));
-  document.getElementById('buyBusinessUsdt')?.addEventListener('click', () => buyBusiness('USDT'));
-  document.getElementById('buyBusinessTon')?.addEventListener('click', () => buyBusiness('TON'));
   loadBloggers();loadPro();loadMyProfile();
 </script>
 </body>
