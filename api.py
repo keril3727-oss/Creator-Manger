@@ -75,7 +75,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://keril3727-oss.github.io"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "X-Telegram-Init-Data"],
 )
 
@@ -140,13 +140,28 @@ async def bloggers():
         "order": "created_at.desc",
     })
 
+@app.get("/api/profile/me")
+async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
+    rows = await db_request("GET", "bloggers", params={
+        "select": "telegram_id,username,display_name,niche,description,followers,photo_url",
+        "telegram_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    return rows[0] if rows else {}
+
+
 @app.post("/api/profile")
 async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     payload = profile.model_dump()
     payload["username"] = payload["username"].lstrip("@")
     payload["telegram_id"] = telegram_id
-    result = await db_request("POST", "bloggers", params={"on_conflict": "telegram_id"}, payload=payload)
-    return result
+    existing = await db_request("GET", "bloggers", params={
+        "select": "telegram_id", "telegram_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    if existing:
+        return await db_request("PATCH", "bloggers", params={
+            "telegram_id": f"eq.{telegram_id}",
+        }, payload=payload)
+    return await db_request("POST", "bloggers", payload=payload)
 
 @app.get("/api/campaigns")
 async def campaigns():
@@ -227,6 +242,14 @@ async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fas
         except ValueError:
             pass
     expiry = (base + datetime.timedelta(days=30)).isoformat().replace("+00:00", "Z")
-    await db_request("POST", "user_subscriptions", params={"on_conflict": "user_id"},
-        payload={"user_id": telegram_id, "expires_at": expiry, "last_invoice_id": invoice_id})
+    existing_subscription = await db_request("GET", "user_subscriptions", params={
+        "select": "user_id", "user_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    subscription_payload = {"user_id": telegram_id, "expires_at": expiry, "last_invoice_id": invoice_id}
+    if existing_subscription:
+        await db_request("PATCH", "user_subscriptions", params={
+            "user_id": f"eq.{telegram_id}",
+        }, payload=subscription_payload)
+    else:
+        await db_request("POST", "user_subscriptions", payload=subscription_payload)
     return {"paid": True, "expires_at": expiry}
