@@ -76,25 +76,42 @@
       <div class="cards" id="cards"></div>
     </section>
     <section id="profile" class="view">
-      <div class="section-head"><h2>Продать рекламу</h2></div>
-      <p class="note">Добавь свой блог или Telegram-канал в каталог, укажи охваты и цены — рекламодатели смогут находить тебя и обращаться напрямую.</p>
-      <form class="form" onsubmit="saveProfile(event)">
-        <select id="platformType" onchange="toggleChannelUrl()"><option value="author">Автор</option><option value="channel">TG-канал</option></select>
-        <input id="displayName" placeholder="Имя автора или название канала" required maxlength="60"><input id="profileUsername" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
-        <div id="channelUrlWrap" style="display:none"><input id="channelUrl" placeholder="Ссылка на TG-канал (https://t.me/...)"><p class="note">Укажи публичную ссылку на канал.</p></div>
-        <input id="nicheInput" placeholder="Тематика канала (например, Lifestyle)" required maxlength="50">
-        <input id="followers" type="number" min="0" placeholder="Количество подписчиков" required>
-        <input id="reach" type="number" min="0" placeholder="Средние охваты публикации" required>
-        <input id="adFormats" placeholder="Форматы рекламы (пост, сторис, видео)" required maxlength="200">
-        <input id="price" placeholder="Цена рекламы (например, пост — 50 €)" required maxlength="80">
-        <p class="note">Free: до 70 € за рекламу. Pro и Business: без лимита цены.</p>
-        <label class="note" for="profilePhoto">Фото профиля</label>
-        <input id="profilePhoto" type="file" accept="image/jpeg,image/png,image/webp">
-        <img id="profilePhotoPreview" alt="Фото профиля" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px;border:1px solid var(--line)">
-        <textarea id="description" placeholder="Расскажи о своём блоге"></textarea>
-        <button class="primary" type="submit">Сохранить профиль</button>
+      <div class="section-head"><h2>Выставить рекламу</h2></div>
+      <div class="tariff-switch" style="width:100%;justify-content:stretch">
+        <button id="authorFormTab" class="active" style="flex:1" type="button" onclick="switchProfileForm('author')">Я блогер</button>
+        <button id="channelFormTab" style="flex:1" type="button" onclick="switchProfileForm('channel')">У меня TG-канал</button>
+      </div>
+      <p class="note">Выбери тип площадки — для каждого свой набор полей. Контакт для связи берётся из твоего Telegram.</p>
+      <form class="form profile-form" id="authorProfileForm" data-kind="author" onsubmit="saveProfile(event)">
+        <input name="display_name" placeholder="Имя блогера / название блога" required maxlength="60">
+        <input name="username" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
+        <input name="niche" placeholder="Тематика блога (например, Lifestyle)" required maxlength="50">
+        <input name="followers" type="number" min="0" placeholder="Подписчики в соцсетях" required>
+        <input name="reach" type="number" min="0" placeholder="Средние просмотры публикации" required>
+        <input name="ad_formats" placeholder="Форматы: интеграция, сторис, видео" required maxlength="200">
+        <input name="price" placeholder="Цена рекламы (например, 50 €)" required maxlength="80">
+        <textarea name="description" placeholder="Расскажи о блоге, аудитории и контенте"></textarea>
+        <label class="note">Фото блогера / профиля</label><input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+        <img class="profile-preview" alt="Предпросмотр фото" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px">
+        <button class="primary" type="submit">Сохранить профиль блогера</button>
+        <p class="note profile-note">Профиль блогера появится в каталоге.</p>
       </form>
-      <p class="note" id="profileNote">Профиль можно сохранить и опубликовать в каталоге.</p>
+      <form class="form profile-form" id="channelProfileForm" data-kind="channel" onsubmit="saveProfile(event)" style="display:none">
+        <input name="display_name" placeholder="Название Telegram-канала" required maxlength="60">
+        <input name="channel_url" placeholder="Ссылка на канал: https://t.me/..." required>
+        <input name="username" placeholder="@username владельца для связи" required minlength="5" maxlength="33">
+        <input name="niche" placeholder="Тематика канала" required maxlength="50">
+        <input name="followers" type="number" min="0" placeholder="Количество подписчиков" required>
+        <input name="reach" type="number" min="0" placeholder="Средний охват одного поста" required>
+        <input name="ad_formats" placeholder="Рекламные форматы: пост, закреп, серия постов" required maxlength="200">
+        <input name="price" placeholder="Цена размещения (например, 50 €)" required maxlength="80">
+        <textarea name="description" placeholder="Опиши аудиторию, тематику и условия размещения"></textarea>
+        <label class="note">Аватар канала</label><input name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+        <img class="profile-preview" alt="Предпросмотр аватара" style="display:none;width:112px;height:112px;object-fit:cover;border-radius:22px">
+        <button class="primary" type="submit">Сохранить TG-канал</button>
+        <p class="note profile-note">Канал появится в отдельном каталоге TG-каналов.</p>
+      </form>
+      <p class="note">Free: до 70 € за рекламу. Pro и Business: без лимита цены.</p>
     </section>
     <section id="campaigns" class="view">
       <div class="section-head"><h2>Мои объявления</h2><span class="count">Управление</span></div>
@@ -222,16 +239,21 @@
     document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
   }
   function setCatalogKind(kind){catalogKind=kind;document.getElementById('authorsTab').classList.toggle('active',kind==='author');document.getElementById('channelsTab').classList.toggle('active',kind==='channel');document.getElementById('buyActionTitle').textContent=kind==='author'?'Заказать рекламу':'Купить рекламу';document.getElementById('buyActionSub').textContent=kind==='author'?'Найти блогера для рекламы':'Найти TG-канал для размещения';document.getElementById('sellActionTitle').textContent=kind==='author'?'Выставить рекламу':'Продать рекламу';document.getElementById('sellActionSub').textContent=kind==='author'?'Разместить предложение автора':'Добавить свой TG-канал';loadBloggers();}
-  function toggleChannelUrl(){const channel=document.getElementById('platformType').value==='channel';document.getElementById('channelUrlWrap').style.display=channel?'block':'none';document.getElementById('channelUrl').required=channel;}
+  function switchProfileForm(kind){
+    document.getElementById('authorProfileForm').style.display=kind==='author'?'grid':'none';
+    document.getElementById('channelProfileForm').style.display=kind==='channel'?'grid':'none';
+    document.getElementById('authorFormTab').classList.toggle('active',kind==='author');
+    document.getElementById('channelFormTab').classList.toggle('active',kind==='channel');
+  }
   function setNiche(btn){selectedNiche=btn.dataset.niche;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===btn));renderCards()}
   function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='campaigns')loadCampaigns()}
-  function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*="catalog"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('profile',document.querySelector('.tab[onclick*="profile"]'));document.getElementById('displayName').scrollIntoView({behavior:'smooth',block:'center'});}}
-  document.getElementById('profilePhoto').addEventListener('change',e=>{
-    const file=e.target.files[0], preview=document.getElementById('profilePhotoPreview');
+  function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*="catalog"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('profile',document.querySelector('.tab[onclick*="profile"]'));switchProfileForm(catalogKind==='channel'?'channel':'author');document.querySelector('#profile form[style*="grid"]')?.scrollIntoView({behavior:'smooth',block:'center'});}}
+  document.querySelectorAll('.profile-form input[name="photo"]').forEach(input=>input.addEventListener('change',e=>{
+    const file=e.target.files[0], preview=e.target.form.querySelector('.profile-preview');
     if(!file){preview.style.display='none';return;}
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){notify('Выбери JPG, PNG или WEBP до 5 МБ');e.target.value='';preview.style.display='none';return;}
     preview.src=URL.createObjectURL(file);preview.style.display='block';
-  });
+  }));
   async function uploadImage(file){
     const upload=await fetch(API_BASE+'/api/upload-image',{method:'POST',headers:{'Content-Type':file.type,'X-Telegram-Init-Data':initData},body:file});
     const result=await upload.json().catch(()=>({}));
@@ -239,39 +261,22 @@
     return result.image_url;
   }
   function contactBlogger(username){if(!username){notify('Не указан Telegram username');return;}const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
-  let profileSaving=false;
+  let profileSaving=false,savedProfilePhoto=null;
   async function saveProfile(e){
-    e.preventDefault();
-    if(profileSaving)return;
-    const form=e.currentTarget;
-    const button=form.querySelector('button[type="submit"]');
-    const note=document.getElementById('profileNote');
-    profileSaving=true;
-    button.disabled=true;
-    const previousText=button.textContent;
-    button.textContent='Сохраняю…';
-    note.textContent='Сохраняю профиль. Не закрывай приложение…';
+    e.preventDefault();if(profileSaving)return;
+    const form=e.currentTarget,kind=form.dataset.kind,button=form.querySelector('button[type="submit"]'),note=form.querySelector('.profile-note');
+    const val=name=>form.elements.namedItem(name)?.value?.trim()||'';
+    profileSaving=true;button.disabled=true;const previousText=button.textContent;button.textContent='Сохраняю…';note.textContent='Сохраняю профиль…';
     try{
-      const file=document.getElementById('profilePhoto').files[0];
-      let photo_url=savedProfilePhoto;
+      const file=form.elements.namedItem('photo').files[0];let photo_url=savedProfilePhoto;
       if(file)photo_url=await uploadImage(file);
-      const platform_type=document.getElementById('platformType').value;
-      const channel_url=document.getElementById('channelUrl').value.trim()||null;
-      if(platform_type==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
-      const profile={display_name:document.getElementById('displayName').value.trim(),platform_type,channel_url,niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),reach:Number(document.getElementById('reach').value),ad_formats:document.getElementById('adFormats').value.trim(),price:document.getElementById('price').value.trim(),description:document.getElementById('description').value.trim(),photo_url,username:(telegramUser?.username||document.getElementById('profileUsername').value.trim().replace(/^@/,''))};
+      const channel_url=kind==='channel'?val('channel_url'):null;
+      if(kind==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
+      const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
-      savedProfilePhoto=photo_url;
-      note.textContent='Профиль сохранён и опубликован в каталоге.';
-      notify('Профиль сохранён!');
-      await loadBloggers();
-    }catch(err){
-      note.textContent='Не удалось сохранить: '+err.message;
-      notify(err.message);
-    }finally{
-      profileSaving=false;
-      button.disabled=false;
-      button.textContent=previousText;
-    }
+      savedProfilePhoto=photo_url;note.textContent='Профиль сохранён и опубликован в каталоге.';notify('Профиль сохранён!');await loadBloggers();
+    }catch(err){note.textContent='Не удалось сохранить: '+err.message;notify(err.message);}
+    finally{profileSaving=false;button.disabled=false;button.textContent=previousText;}
   }
   let editingCampaignId=null, editingCampaignImage=null;
   async function loadMyCampaigns(){
@@ -401,24 +406,17 @@
   async function loadPro(){try{const r=await api('/api/pro/status');if(r.plan==='business'){document.getElementById('businessStatus').textContent=r.admin?'Business активен для твоего аккаунта @verpot — бесплатно (админ-доступ).':'Business активен.';document.getElementById('proStatus').textContent='Доступ Business включает возможности PRO.';}else if(r.active){document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}}catch(e){}}
   async function loadMyProfile(){
     try{
-      const p=await api('/api/profile/me');
-      if(!p || !p.telegram_id)return;
-      document.getElementById('platformType').value=p.platform_type||'author';toggleChannelUrl();document.getElementById('channelUrl').value=p.channel_url||'';
-      document.getElementById('displayName').value=p.display_name||'';
-      document.getElementById('profileUsername').value=p.username?'@'+p.username:'';
-      document.getElementById('nicheInput').value=p.niche||'';
-      document.getElementById('followers').value=p.followers??'';
-      document.getElementById('reach').value=p.reach??'';
-      document.getElementById('adFormats').value=p.ad_formats||'';
-      document.getElementById('price').value=p.price||'';
-      document.getElementById('description').value=p.description||'';
-      savedProfilePhoto=p.photo_url||null;
-      if(savedProfilePhoto){
-        const preview=document.getElementById('profilePhotoPreview');
-        preview.src=savedProfilePhoto;preview.style.display='block';
+      const p=await api('/api/profile/me');if(!p||!p.telegram_id)return;
+      const kind=p.platform_type==='channel'?'channel':'author';
+      const form=document.getElementById(kind==='channel'?'channelProfileForm':'authorProfileForm');
+      switchProfileForm(kind);
+      for(const [key,value] of Object.entries({display_name:p.display_name,username:p.username?'@'+p.username:'',channel_url:p.channel_url||'',niche:p.niche,followers:p.followers,reach:p.reach,ad_formats:p.ad_formats,price:p.price,description:p.description})){
+        const field=form.elements.namedItem(key);if(field)field.value=value??'';
       }
-      document.getElementById('profileNote').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
-    }catch(e){document.getElementById('profileNote').textContent='Не удалось загрузить профиль: '+e.message;}
+      savedProfilePhoto=p.photo_url||null;
+      if(savedProfilePhoto){const preview=form.querySelector('.profile-preview');preview.src=savedProfilePhoto;preview.style.display='block';}
+      form.querySelector('.profile-note').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
+    }catch(e){document.querySelectorAll('.profile-note').forEach(n=>n.textContent='Не удалось загрузить профиль: '+e.message);}
   }
 
   document.getElementById('buyProUsdt').addEventListener('click',()=>buyPro('USDT'));
