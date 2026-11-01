@@ -31,6 +31,9 @@
     <section id="catalog" class="view active">
       <div class="hero"><div class="eyebrow">Реклама без лишних сообщений</div><h1>Находи блогеров.<br>Запускай рекламу.</h1><p>Каталог авторов, понятные предложения и заявки — всё в одном месте.</p><button class="primary" onclick="document.getElementById('search').focus()">Найти блогера&nbsp; →</button></div>
       <div class="section-head"><h2>Каталог блогеров</h2><span class="count" id="count">Подборка</span></div>
+      <div id="adminCatalogTools" style="display:none;margin:-3px 0 12px">
+        <button class="small-btn" type="button" style="border-color:#9a4b55;color:#ffb4bd" onclick="clearTestBloggers()">Очистить все тестовые профили</button>
+      </div>
       <input id="search" class="search" placeholder="⌕  Имя или тематика блогера" oninput="renderCards()">
       <div class="chips" id="chips">
         <button class="chip active" data-niche="Все" onclick="setNiche(this)">Все</button>
@@ -157,6 +160,18 @@
     return data;
   }
   function notify(message){if(tg)tg.showAlert(message);else alert(message)}
+  if(String(telegramUser?.username||"").toLowerCase()==="verpot"){
+    document.getElementById("adminCatalogTools").style.display="block";
+  }
+  async function clearTestBloggers(){
+    const confirmed=confirm("Удалить ВСЕ профили блогеров из каталога? Это действие нельзя отменить. Аккаунты, тарифы и объявления компаний останутся.");
+    if(!confirmed)return;
+    try{
+      await api("/api/admin/bloggers",{method:"DELETE"});
+      notify("Каталог профилей очищен.");
+      await loadBloggers();
+    }catch(e){notify(e.message);}
+  }
   async function loadBloggers(){
     const box=document.getElementById('cards');
     try {
