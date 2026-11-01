@@ -280,9 +280,11 @@ def main():
     if not TOKEN:
         raise RuntimeError("Не задан BOT_TOKEN")
 
-    base_url = os.getenv("WEBHOOK_URL")
+    # Render автоматически предоставляет публичный URL веб-сервиса.
+    # WEBHOOK_URL можно задать вручную, но это необязательно.
+    base_url = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
     if not base_url:
-        raise RuntimeError("Не задан WEBHOOK_URL")
+        raise RuntimeError("Не найден адрес сервиса: задайте WEBHOOK_URL или используйте Render Web Service")
 
     init_db()
 
