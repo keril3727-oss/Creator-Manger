@@ -87,6 +87,7 @@ class Profile(BaseModel):
     followers: int = Field(ge=0, le=2_000_000_000)
     description: str = Field(default="", max_length=1000)
     photo_url: str | None = None
+    username: str = Field(min_length=5, max_length=32, pattern=r"^[A-Za-z0-9_]+$")
 
 class Campaign(BaseModel):
     title: str = Field(min_length=1, max_length=100)
@@ -95,6 +96,7 @@ class Campaign(BaseModel):
     budget: float = Field(gt=0, le=100_000_000)
     currency: str = Field(default="EUR", max_length=8)
     image_url: str | None = Field(default=None, max_length=500)
+    contact_username: str = Field(min_length=5, max_length=32, pattern=r"^[A-Za-z0-9_]+$")
 
 class ApplicationRequest(BaseModel):
     message: str = Field(default="", max_length=1000)
@@ -140,12 +142,7 @@ async def bloggers():
 @app.post("/api/profile")
 async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     payload = profile.model_dump()
-    values = dict(parse_qsl(init_data, keep_blank_values=True))
-    try:
-        telegram_user = json.loads(values.get("user", "{}"))
-        payload["username"] = telegram_user.get("username")
-    except Exception:
-        payload["username"] = None
+    payload["username"] = payload["username"].lstrip("@")
     payload["telegram_id"] = telegram_id
     result = await db_request("POST", "bloggers", params={"on_conflict": "telegram_id"}, payload=payload)
     return result
@@ -153,13 +150,14 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
 @app.get("/api/campaigns")
 async def campaigns():
     return await db_request("GET", "campaigns", params={
-        "select": "id,advertiser_id,title,description,niche,budget,currency,image_url,status,created_at",
+        "select": "id,advertiser_id,contact_username,title,description,niche,budget,currency,image_url,status,created_at",
         "status": "eq.open", "order": "created_at.desc",
     })
 
 @app.post("/api/campaigns")
 async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id)):
     payload = campaign.model_dump()
+    payload["contact_username"] = payload["contact_username"].lstrip("@")
     payload["advertiser_id"] = telegram_id
     return await db_request("POST", "campaigns", payload=payload)
 
@@ -167,3 +165,65 @@ async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fas
 async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
     payload = {"campaign_id": campaign_id, "blogger_id": telegram_id, "message": request.message}
     return await db_request("POST", "campaign_applications", payload=payload)
+
+
+class ProInvoiceRequest(BaseModel):
+    asset: str = Field(default="USDT", pattern="^(USDT|TON)$")
+
+@app.post("/api/pro/create-invoice")
+async def create_pro_invoice(request: ProInvoiceRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    if not CRYPTOPAY_TOKEN:
+        raise HTTPException(503, "Crypto Pay не настроен на сервере")
+    payload = {"currency_type": "fiat", "fiat": "USD", "amount": "15",
+               "accepted_assets": request.asset, "description": "Creator Manager PRO — 30 дней",
+               "payload": str(telegram_id), "allow_comments": False,
+               "allow_anonymous": False, "expires_in": 1800}
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.post("https://pay.crypt.bot/api/createInvoice",
+            headers={"Crypto-Pay-API-Token": CRYPTOPAY_TOKEN}, json=payload)
+    data = response.json()
+    if response.is_error or not data.get("ok"):
+        raise HTTPException(502, "Crypto Pay не смог создать счёт")
+    invoice = data.get("result", {})
+    return {"invoice_id": str(invoice.get("invoice_id")),
+            "pay_url": invoice.get("bot_invoice_url") or invoice.get("web_app_invoice_url") or invoice.get("pay_url")}
+
+@app.get("/api/pro/status")
+async def pro_status(telegram_id: int = __import__("fastapi").Depends(user_id)):
+    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    active = bool(rows and rows[0].get("expires_at") and rows[0]["expires_at"] > now)
+    return {"active": active, "expires_at": rows[0].get("expires_at") if rows else None}
+
+@app.post("/api/pro/verify/{invoice_id}")
+async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    if not CRYPTOPAY_TOKEN:
+        raise HTTPException(503, "Crypto Pay не настроен на сервере")
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get("https://pay.crypt.bot/api/getInvoices",
+            headers={"Crypto-Pay-API-Token": CRYPTOPAY_TOKEN},
+            params={"invoice_ids": invoice_id, "count": 1})
+    data = response.json()
+    if response.is_error or not data.get("ok"):
+        raise HTTPException(502, "Не удалось проверить оплату")
+    result = data.get("result", [])
+    invoices = result if isinstance(result, list) else result.get("items", [])
+    invoice = next((x for x in invoices if str(x.get("invoice_id")) == invoice_id), None)
+    if not invoice or invoice.get("payload") != str(telegram_id):
+        raise HTTPException(404, "Счёт не найден")
+    if invoice.get("status") != "paid":
+        return {"paid": False}
+    import datetime
+    base = datetime.datetime.now(datetime.timezone.utc)
+    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    if rows and rows[0].get("expires_at"):
+        try:
+            old = datetime.datetime.fromisoformat(rows[0]["expires_at"].replace("Z", "+00:00"))
+            if old > base:
+                base = old
+        except ValueError:
+            pass
+    expiry = (base + datetime.timedelta(days=30)).isoformat().replace("+00:00", "Z")
+    await db_request("POST", "user_subscriptions", params={"on_conflict": "user_id"},
+        payload={"user_id": telegram_id, "expires_at": expiry, "last_invoice_id": invoice_id})
+    return {"paid": True, "expires_at": expiry}
