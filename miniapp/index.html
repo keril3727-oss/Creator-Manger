@@ -107,7 +107,36 @@
   // Replace this value with the public URL of the Render service.
   const API_BASE = "https://creator-manger.onrender.com";
   const initData = tg?.initData || "";
+  const telegramUser = tg?.initDataUnsafe?.user || null;
   let selectedNiche="Все", bloggers=[], savedProfilePhoto=null;
+  function applyTelegramAccount(){
+    if(!telegramUser)return;
+    const fullName=[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(" ").trim();
+    const nameInput=document.getElementById("displayName");
+    const usernameInput=document.getElementById("profileUsername");
+    if(fullName && !nameInput.value) nameInput.value=fullName;
+    if(telegramUser.username){
+      usernameInput.value="@"+telegramUser.username;
+      usernameInput.readOnly=true;
+      usernameInput.placeholder="Username из Telegram";
+    } else {
+      usernameInput.value="";
+      usernameInput.readOnly=true;
+      usernameInput.placeholder="Добавь username в настройках Telegram";
+    }
+    if(telegramUser.photo_url && !savedProfilePhoto){
+      savedProfilePhoto=telegramUser.photo_url;
+      const preview=document.getElementById("profilePhotoPreview");
+      preview.src=telegramUser.photo_url;
+      preview.style.display="block";
+    }
+    const avatar=document.getElementById("avatar");
+    if(telegramUser.photo_url){
+      avatar.innerHTML='<img src="'+esc(telegramUser.photo_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:14px">';
+    }else{
+      avatar.textContent=(telegramUser.first_name||"CM").slice(0,2).toUpperCase();
+    }
+  }
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   function errorText(value, fallback="Произошла ошибка") {
     if (typeof value === "string" && value.trim()) return value;
@@ -173,7 +202,7 @@
       const file=document.getElementById('profilePhoto').files[0];
       let photo_url=savedProfilePhoto;
       if(file)photo_url=await uploadImage(file);
-      const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),reach:Number(document.getElementById('reach').value),ad_formats:document.getElementById('adFormats').value.trim(),price:document.getElementById('price').value.trim(),description:document.getElementById('description').value.trim(),photo_url,username:document.getElementById('profileUsername').value.trim().replace(/^@/,'')};
+      const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),reach:Number(document.getElementById('reach').value),ad_formats:document.getElementById('adFormats').value.trim(),price:document.getElementById('price').value.trim(),description:document.getElementById('description').value.trim(),photo_url,username:(telegramUser?.username||document.getElementById('profileUsername').value.trim().replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       savedProfilePhoto=photo_url;
       note.textContent='Профиль сохранён и опубликован в каталоге.';
@@ -295,6 +324,7 @@
   window.addEventListener('error',e=>{const box=document.getElementById('proStatus');if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');});
   window.buyPro = buyPro;
   window.buyBusiness = buyBusiness;
+  applyTelegramAccount();
   loadBloggers();loadPro();loadMyProfile();
 </script>
 </body>
