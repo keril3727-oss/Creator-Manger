@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import time
 from contextlib import asynccontextmanager
 from urllib.parse import parse_qsl
@@ -164,7 +165,7 @@ async def bloggers():
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,niche,description,followers,photo_url",
+        "select": "telegram_id,username,display_name,niche,description,followers,reach,ad_formats,price,photo_url",
         "telegram_id": f"eq.{telegram_id}", "limit": "1",
     })
     return rows[0] if rows else {}
@@ -172,6 +173,21 @@ async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_i
 
 @app.post("/api/profile")
 async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    # Blogger profile price cap: Free up to 70 EUR; Pro and Business have no cap.
+    admin_business = is_business_admin(init_data)
+    sub_rows = await db_request("GET", "user_subscriptions", params={
+        "select": "expires_at,plan", "user_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    now_dt = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now_dt)
+    plan = "business" if admin_business else (sub_rows[0].get("plan", "pro").lower() if sub_active and sub_rows else "free")
+    if plan == "free":
+        amounts = re.findall(r"\\d+(?:[.,]\\d+)?", profile.price.replace(" ", ""))
+        if not amounts:
+            raise HTTPException(403, "На Free укажи цену числом в евро. Максимум — 70 €.")
+        highest_price = max(float(value.replace(",", ".")) for value in amounts)
+        if highest_price > 70:
+            raise HTTPException(403, "На Free цена рекламы в профиле — максимум 70 €. Подключи Pro или Business, чтобы указать больше.")
     payload = profile.model_dump()
     payload["username"] = payload["username"].lstrip("@")
     payload["telegram_id"] = telegram_id
