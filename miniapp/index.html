@@ -83,7 +83,7 @@
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
   // Replace this value with the public URL of the Render service.
-  const API_BASE = "https://YOUR-RENDER-SERVICE.onrender.com";
+  const API_BASE = "https://creator-manger.onrender.com";
   const initData = tg?.initData || "";
   let selectedNiche="Все", bloggers=[];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
