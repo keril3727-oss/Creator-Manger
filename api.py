@@ -16,6 +16,7 @@ from bot import build_application
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+CRYPTOPAY_TOKEN = os.getenv("CRYPTOPAY_TOKEN", "")
 
 def verify_init_data(init_data: str) -> int:
     if not BOT_TOKEN or not init_data:
