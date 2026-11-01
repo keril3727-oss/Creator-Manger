@@ -193,8 +193,9 @@ async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fas
     admin_business = is_business_admin(init_data)
     sub_rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    pro_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now)
-    max_budget = float("inf") if admin_business else (400 if pro_active else 70)
+    sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now)
+    plan = sub_rows[0].get("plan", "pro") if sub_active and sub_rows else "free"
+    max_budget = float("inf") if admin_business or (sub_active and plan == "business") else (400 if sub_active else 70)
     if campaign.currency == "EUR" and campaign.budget > max_budget:
         raise HTTPException(403, "Лимит кампании: " + ("без ограничений для Business" if admin_business else ("400 € для PRO" if pro_active else "70 € для обычного тарифа")))
     payload = campaign.model_dump()
@@ -217,14 +218,32 @@ async def create_pro_invoice(request: ProInvoiceRequest, telegram_id: int = __im
         raise HTTPException(503, "Crypto Pay не настроен на сервере")
     payload = {"currency_type": "fiat", "fiat": "USD", "amount": "15",
                "accepted_assets": request.asset, "description": "Creator Manager PRO — 30 дней",
-               "payload": str(telegram_id), "allow_comments": False,
-               "allow_anonymous": False, "expires_in": 1800}
+               "payload": json.dumps({"user_id": telegram_id, "plan": "pro"}),
+               "allow_comments": False, "allow_anonymous": False, "expires_in": 1800}
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.post("https://pay.crypt.bot/api/createInvoice",
             headers={"Crypto-Pay-API-Token": CRYPTOPAY_TOKEN}, json=payload)
     data = response.json()
     if response.is_error or not data.get("ok"):
         raise HTTPException(502, "Crypto Pay не смог создать счёт")
+    invoice = data.get("result", {})
+    return {"invoice_id": str(invoice.get("invoice_id")),
+            "pay_url": invoice.get("bot_invoice_url") or invoice.get("web_app_invoice_url") or invoice.get("pay_url")}
+
+@app.post("/api/business/create-invoice")
+async def create_business_invoice(request: ProInvoiceRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    if not CRYPTOPAY_TOKEN:
+        raise HTTPException(503, "Crypto Pay не настроен на сервере")
+    payload = {"currency_type": "fiat", "fiat": "EUR", "amount": "100",
+               "accepted_assets": request.asset, "description": "Creator Manager Business — 30 дней",
+               "payload": json.dumps({"user_id": telegram_id, "plan": "business"}),
+               "allow_comments": False, "allow_anonymous": False, "expires_in": 1800}
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.post("https://pay.crypt.bot/api/createInvoice",
+            headers={"Crypto-Pay-API-Token": CRYPTOPAY_TOKEN}, json=payload)
+    data = response.json()
+    if response.is_error or not data.get("ok"):
+        raise HTTPException(502, "Crypto Pay не смог создать счёт Business")
     invoice = data.get("result", {})
     return {"invoice_id": str(invoice.get("invoice_id")),
             "pay_url": invoice.get("bot_invoice_url") or invoice.get("web_app_invoice_url") or invoice.get("pay_url")}
@@ -236,10 +255,10 @@ async def pro_status(telegram_id: int = __import__("fastapi").Depends(user_id), 
     rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     active = bool(rows and rows[0].get("expires_at") and rows[0]["expires_at"] > now)
-    return {"active": active, "plan": "pro" if active else "free", "admin": False, "expires_at": rows[0].get("expires_at") if rows else None}
+    plan = rows[0].get("plan", "pro") if active and rows else "free"
+    return {"active": active, "plan": plan, "admin": False, "expires_at": rows[0].get("expires_at") if rows else None}
 
-@app.post("/api/pro/verify/{invoice_id}")
-async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fastapi").Depends(user_id)):
+async def activate_subscription(invoice_id: str, telegram_id: int, expected_plan: str):
     if not CRYPTOPAY_TOKEN:
         raise HTTPException(503, "Crypto Pay не настроен на сервере")
     async with httpx.AsyncClient(timeout=20) as client:
@@ -252,15 +271,22 @@ async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fas
     result = data.get("result", [])
     invoices = result if isinstance(result, list) else result.get("items", [])
     invoice = next((x for x in invoices if str(x.get("invoice_id")) == invoice_id), None)
-    if not invoice or invoice.get("payload") != str(telegram_id):
+    try:
+        invoice_payload = json.loads(invoice.get("payload", "{}")) if invoice else {}
+    except (TypeError, ValueError):
+        invoice_payload = {}
+    # Legacy PRO invoices used the Telegram ID directly in payload.
+    valid_owner = invoice_payload.get("user_id") == telegram_id or invoice.get("payload") == str(telegram_id) if invoice else False
+    valid_plan = invoice_payload.get("plan", "pro") == expected_plan if invoice else False
+    if not invoice or not valid_owner or not valid_plan:
         raise HTTPException(404, "Счёт не найден")
     if invoice.get("status") != "paid":
         return {"paid": False}
     import datetime
     base = datetime.datetime.now(datetime.timezone.utc)
-    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at,last_invoice_id", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at,last_invoice_id,plan", "user_id": f"eq.{telegram_id}", "limit": "1"})
     if rows and rows[0].get("last_invoice_id") == invoice_id:
-        return {"paid": True, "expires_at": rows[0].get("expires_at")}
+        return {"paid": True, "plan": rows[0].get("plan", expected_plan), "expires_at": rows[0].get("expires_at")}
     if rows and rows[0].get("expires_at"):
         try:
             old = datetime.datetime.fromisoformat(rows[0]["expires_at"].replace("Z", "+00:00"))
@@ -272,11 +298,19 @@ async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fas
     existing_subscription = await db_request("GET", "user_subscriptions", params={
         "select": "user_id", "user_id": f"eq.{telegram_id}", "limit": "1",
     })
-    subscription_payload = {"user_id": telegram_id, "expires_at": expiry, "last_invoice_id": invoice_id}
+    subscription_payload = {"user_id": telegram_id, "expires_at": expiry, "last_invoice_id": invoice_id, "plan": expected_plan}
     if existing_subscription:
         await db_request("PATCH", "user_subscriptions", params={
             "user_id": f"eq.{telegram_id}",
         }, payload=subscription_payload)
     else:
         await db_request("POST", "user_subscriptions", payload=subscription_payload)
-    return {"paid": True, "expires_at": expiry}
+    return {"paid": True, "plan": expected_plan, "expires_at": expiry}
+
+@app.post("/api/pro/verify/{invoice_id}")
+async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    return await activate_subscription(invoice_id, telegram_id, "pro")
+
+@app.post("/api/business/verify/{invoice_id}")
+async def verify_business_invoice(invoice_id: str, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    return await activate_subscription(invoice_id, telegram_id, "business")
