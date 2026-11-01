@@ -18,7 +18,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 CRYPTOPAY_TOKEN = os.getenv("CRYPTOPAY_TOKEN", "")
 
-def verify_init_data(init_data: str) -> int:
+def verify_init_data_full(init_data: str) -> dict:
     if not BOT_TOKEN or not init_data:
         raise HTTPException(401, "Открой приложение через Telegram")
     values = dict(parse_qsl(init_data, keep_blank_values=True))
@@ -35,11 +35,11 @@ def verify_init_data(init_data: str) -> int:
         raise HTTPException(401, "Не удалось проверить пользователя Telegram")
     try:
         user = json.loads(values["user"])
-        return int(user["id"])
+        user["id"] = int(user["id"])\n        return user
     except Exception:
         raise HTTPException(401, "Не удалось определить Telegram-пользователя")
 
-async def db_request(method: str, table: str, *, params=None, payload=None, prefer="return=representation"):
+def verify_init_data(init_data: str) -> int:\n    return int(verify_init_data_full(init_data)["id"])\n\ndef is_business_admin(init_data: str) -> bool:\n    user = verify_init_data_full(init_data)\n    return str(user.get("username", "")).casefold() == "verpot"\n\nasync def db_request(method: str, table: str, *, params=None, payload=None, prefer="return=representation"):
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise HTTPException(503, "Supabase пока не настроен на сервере")
     headers = {
@@ -219,7 +219,7 @@ async def pro_status(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     active = bool(rows and rows[0].get("expires_at") and rows[0]["expires_at"] > now)
-    return {"active": active, "expires_at": rows[0].get("expires_at") if rows else None}
+    return {"active": active, "plan": "pro" if active else "free", "admin": False, "expires_at": rows[0].get("expires_at") if rows else None}
 
 @app.post("/api/pro/verify/{invoice_id}")
 async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fastapi").Depends(user_id)):
