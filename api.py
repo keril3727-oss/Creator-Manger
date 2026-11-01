@@ -54,8 +54,18 @@ async def db_request(method: str, table: str, *, params=None, payload=None, pref
             headers=headers, params=params, json=payload
         )
     if response.is_error:
-        # Do not expose keys or internal request headers.
-        raise HTTPException(502, f"Ошибка базы данных ({response.status_code})")
+        # Return a safe, useful database message without exposing request headers or credentials.
+        try:
+            error_data = response.json()
+            if isinstance(error_data, dict):
+                message = error_data.get("message") or error_data.get("details") or error_data.get("hint") or error_data.get("code")
+                if message:
+                    raise HTTPException(502, f"Ошибка базы данных: {str(message)[:500]}")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        raise HTTPException(502, f"Ошибка базы данных ({response.status_code}): {response.text[:300]}")
     return response.json() if response.content else []
 
 @asynccontextmanager
