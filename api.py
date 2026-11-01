@@ -104,6 +104,9 @@ class Profile(BaseModel):
     display_name: str = Field(min_length=1, max_length=60)
     niche: str = Field(min_length=1, max_length=50)
     followers: int = Field(ge=0, le=2_000_000_000)
+    reach: int = Field(ge=0, le=2_000_000_000)
+    ad_formats: str = Field(min_length=1, max_length=200)
+    price: str = Field(min_length=1, max_length=80)
     description: str = Field(default="", max_length=1000)
     photo_url: str | None = None
     username: str = Field(min_length=5, max_length=32, pattern=r"^[A-Za-z0-9_]+$")
@@ -154,7 +157,7 @@ async def health():
 @app.get("/api/bloggers")
 async def bloggers():
     return await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,niche,description,followers,photo_url",
+        "select": "telegram_id,username,display_name,niche,description,followers,reach,ad_formats,price,photo_url",
         "order": "created_at.desc",
     })
 
