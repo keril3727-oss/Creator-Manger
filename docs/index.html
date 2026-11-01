@@ -55,39 +55,95 @@
       </form>
       <p class="note" id="profileNote">Подключение сохранения профиля будет активировано после настройки защищённого API.</p>
     </section>
+    <section id="campaigns" class="view">
+      <div class="section-head"><h2>Рекламные кампании</h2><span class="count" id="campaignCount">Открытые</span></div>
+      <div id="campaignList" class="cards"><div class="empty">Загружаю кампании…</div></div>
+      <div class="section-head"><h2>Создать кампанию</h2></div>
+      <form class="form" onsubmit="createCampaign(event)">
+        <input id="campaignTitle" placeholder="Название кампании" required maxlength="100">
+        <input id="campaignNiche" placeholder="Тематика (например, Lifestyle)" required maxlength="60">
+        <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
+        <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
+        <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea>
+        <button class="primary" type="submit">Опубликовать кампанию</button>
+      </form>
+    </section>
     <section id="requests" class="view">
       <div class="section-head"><h2>Мои заявки</h2></div>
-      <div class="empty">Здесь будут входящие рекламные заявки и их статусы.</div>
+      <div class="empty">Заявки появятся здесь после подключения списка заявок.</div>
     </section>
   </main>
   <nav class="tabs"><div class="tabs-inner">
     <button class="tab active" onclick="showView('catalog',this)"><b>⌕</b>Каталог</button>
-    <button class="tab" onclick="showView('profile',this)"><b>＋</b>Мой профиль</button>
+    <button class="tab" onclick="showView('profile',this)"><b>＋</b>Профиль</button>
+    <button class="tab" onclick="showView('campaigns',this)"><b>▣</b>Кампании</button>
     <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
   </div></nav>
 <script>
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
-  const samples = [
-    {name:"Алина • daily",niche:"Lifestyle",desc:"Повседневная жизнь, стиль и находки",followers:"24,8 тыс.",price:"от 45 €",icon:"✦"},
-    {name:"Beauty Room",niche:"Красота",desc:"Уход, косметика и честные обзоры",followers:"18,2 тыс.",price:"от 35 €",icon:"✧"},
-    {name:"GameZone",niche:"Игры",desc:"Стримы, обзоры и игровое сообщество",followers:"52 тыс.",price:"от 80 €",icon:"◈"},
-    {name:"Бизнес просто",niche:"Бизнес",desc:"Предпринимательство и личные финансы",followers:"12,6 тыс.",price:"от 60 €",icon:"↗"},
-    {name:"Travel Notes",niche:"Путешествия",desc:"Маршруты, отели и красивые места",followers:"31 тыс.",price:"от 70 €",icon:"⌁"},
-    {name:"Mila Blog",niche:"Lifestyle",desc:"Мода, уют и ежедневное вдохновение",followers:"9,4 тыс.",price:"от 25 €",icon:"♡"}
-  ];
-  let selectedNiche="Все";
+  // Replace this value with the public URL of the Render service.
+  const API_BASE = "https://YOUR-RENDER-SERVICE.onrender.com";
+  const initData = tg?.initData || "";
+  let selectedNiche="Все", bloggers=[];
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  async function api(path, options={}) {
+    if (API_BASE.includes("YOUR-RENDER-SERVICE")) throw new Error("Нужно указать адрес API Render");
+    const response = await fetch(API_BASE + path, {
+      ...options,
+      headers: {"Content-Type":"application/json","X-Telegram-Init-Data":initData,...(options.headers||{})}
+    });
+    const data = await response.json().catch(()=>({}));
+    if (!response.ok) throw new Error(data.detail || "Ошибка сервера: "+response.status);
+    return data;
+  }
+  function notify(message){if(tg)tg.showAlert(message);else alert(message)}
+  async function loadBloggers(){
+    const box=document.getElementById('cards');
+    try {
+      bloggers=await api('/api/bloggers');
+      renderCards();
+    } catch(e) {
+      box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+      document.getElementById('count').textContent='Каталог';
+    }
+  }
   function renderCards(){
     const q=(document.getElementById('search').value||'').toLowerCase();
-    const list=samples.filter(x=>(selectedNiche==="Все"||x.niche===selectedNiche)&&(x.name+" "+x.niche+" "+x.desc).toLowerCase().includes(q));
+    const list=bloggers.filter(x=>(selectedNiche==="Все"||x.niche===selectedNiche)&&
+      (x.display_name+" "+x.niche+" "+(x.description||"")).toLowerCase().includes(q));
     document.getElementById('count').textContent=list.length+" профилей";
-    document.getElementById('cards').innerHTML=list.length?list.map((x,i)=>'<article class="card"><div class="cover">'+x.icon+'</div><div class="card-body"><div class="name">'+x.name+'</div><div class="niche">'+x.niche+'</div><div class="desc">'+x.desc+'</div><div class="stats"><span>◉ '+x.followers+'</span><span>Блогер</span></div><div class="price">'+x.price+'</div><button class="small-btn" onclick="requestAd()">Заказать рекламу</button></div></article>').join(''):'<div class="empty">Ничего не найдено. Попробуй другую тематику или запрос.</div>';
+    document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card"><div class="cover">✦</div><div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="stats"><span>◉ '+Number(x.followers||0).toLocaleString('ru-RU')+'</span><span>Блогер</span></div><button class="small-btn" onclick="notify(\'Напиши блогеру через его Telegram-профиль. Отправка заявок появится следующим обновлением.\')">Связаться</button></div></article>').join(''):'<div class="empty">Пока нет профилей. Стань первым блогером — заполни профиль.</div>';
   }
   function setNiche(btn){selectedNiche=btn.dataset.niche;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===btn));renderCards()}
-  function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn))}
-  function requestAd(){if(tg)tg.showAlert('Отправка заявок подключится после настройки API.');else alert('Отправка заявок подключится после настройки API.')}
-  function saveProfile(e){e.preventDefault();document.getElementById('profileNote').textContent='Форма готова. Сохранение включим после подключения защищённого API и Telegram-проверки.';if(tg)tg.showAlert('Форма профиля заполнена. Сохранение скоро будет подключено.')}
-  renderCards();
+  function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='campaigns')loadCampaigns()}
+  async function saveProfile(e){
+    e.preventDefault();
+    const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),description:document.getElementById('description').value.trim()};
+    try{await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});document.getElementById('profileNote').textContent='Профиль сохранён и опубликован в каталоге.';notify('Профиль сохранён!');loadBloggers();}
+    catch(err){notify(err.message);}
+  }
+  async function loadCampaigns(){
+    const box=document.getElementById('campaignList');
+    try{
+      const items=await api('/api/campaigns');
+      document.getElementById('campaignCount').textContent=items.length+' открытых';
+      box.innerHTML=items.length?items.map(x=>'<article class="card"><div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет кампаний. Рекламодатель может создать первую ниже.</div>';
+    }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
+  }
+  async function createCampaign(e){
+    e.preventDefault();
+    const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim()};
+    try{await api('/api/campaigns',{method:'POST',body:JSON.stringify(payload)});e.target.reset();notify('Кампания опубликована!');loadCampaigns();}
+    catch(err){notify(err.message);}
+  }
+  async function applyCampaign(id){
+    const message=prompt('Коротко расскажи, почему ты подходишь для этой рекламы:');
+    if(message===null)return;
+    try{await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});notify('Отклик отправлен!');}
+    catch(err){notify(err.message);}
+  }
+  loadBloggers();
 </script>
 </body>
 </html>
