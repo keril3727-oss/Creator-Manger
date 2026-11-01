@@ -182,7 +182,7 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
     sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now_dt)
     plan = "business" if admin_business else (sub_rows[0].get("plan", "pro").lower() if sub_active and sub_rows else "free")
     if plan == "free":
-        amounts = re.findall(r"\\d+(?:[.,]\\d+)?", profile.price.replace(" ", ""))
+        amounts = re.findall(r"\d+(?:[.,]\d+)?", profile.price.replace(" ", ""))
         if not amounts:
             raise HTTPException(403, "На Free укажи цену числом в евро. Максимум — 70 €.")
         highest_price = max(float(value.replace(",", ".")) for value in amounts)
