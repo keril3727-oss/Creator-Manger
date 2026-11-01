@@ -70,8 +70,8 @@
       <div class="cards" id="cards"></div>
     </section>
     <section id="profile" class="view">
-      <div class="section-head"><h2>Мой профиль</h2></div>
-      <p class="note">Создай страницу блогера, чтобы рекламодатели могли найти тебя в каталоге.</p>
+      <div class="section-head"><h2>Продать рекламу</h2></div>
+      <p class="note">Добавь свой блог или Telegram-канал в каталог, укажи охваты и цены — рекламодатели смогут находить тебя и обращаться напрямую.</p>
       <form class="form" onsubmit="saveProfile(event)">
         <input id="displayName" placeholder="Имя или название канала" required maxlength="60"><input id="profileUsername" placeholder="@username в Telegram" required minlength="5" maxlength="33">
         <input id="nicheInput" placeholder="Тематика канала (например, Lifestyle)" required maxlength="50">
@@ -215,7 +215,7 @@
   }
   function setNiche(btn){selectedNiche=btn.dataset.niche;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===btn));renderCards()}
   function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='campaigns')loadCampaigns()}
-  function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*=\"catalog\"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('campaigns',document.querySelector('.tab[onclick*=\"campaigns\"]'));document.getElementById('campaignList').scrollIntoView({behavior:'smooth',block:'start'});}}
+  function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*="catalog"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('profile',document.querySelector('.tab[onclick*="profile"]'));document.getElementById('displayName').scrollIntoView({behavior:'smooth',block:'center'});}}
   document.getElementById('profilePhoto').addEventListener('change',e=>{
     const file=e.target.files[0], preview=document.getElementById('profilePhotoPreview');
     if(!file){preview.style.display='none';return;}
