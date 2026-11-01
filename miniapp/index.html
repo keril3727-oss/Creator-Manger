@@ -220,7 +220,7 @@
       button.textContent=previousText;
     }
   }
-  let editingCampaignId=null;
+  let editingCampaignId=null, editingCampaignImage=null;
   async function loadMyCampaigns(){
     const box=document.getElementById('myCampaignList');
     try{
@@ -233,7 +233,7 @@
       const items=await api('/api/campaigns/mine');
       const x=items.find(item=>Number(item.id)===Number(id));
       if(!x)throw new Error('Объявление не найдено');
-      editingCampaignId=Number(id);
+      editingCampaignId=Number(id);editingCampaignImage=x.image_url||null;
       document.getElementById('campaignTitle').value=x.title||'';
       document.getElementById('campaignNiche').value=x.niche||'';
       document.getElementById('campaignBudget').value=x.budget??'';
@@ -248,7 +248,7 @@
     }catch(e){notify(e.message);}
   }
   function cancelCampaignEdit(){
-    editingCampaignId=null;
+    editingCampaignId=null;editingCampaignImage=null;
     document.querySelector('#campaigns form').reset();
     document.getElementById('campaignImagePreview').style.display='none';
     document.getElementById('campaignSubmit').textContent='Опубликовать кампанию';
@@ -288,10 +288,11 @@
         if(!upload.ok)throw new Error(errorText(result.detail||result.error||result.message,'Не удалось загрузить изображение'));
         image_url=result.image_url;
       }
-      const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url,contact_username:document.getElementById('campaignContact').value.trim().replace(/^@/,'')};
-      await api(editingCampaignId?('/api/campaigns/'+editingCampaignId):'/api/campaigns',{method:editingCampaignId?'PATCH':'POST',body:JSON.stringify(payload)});
+      const wasEditing=Boolean(editingCampaignId);
+      const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url:image_url||editingCampaignImage,contact_username:document.getElementById('campaignContact').value.trim().replace(/^@/,'')};
+      await api(editingCampaignId?('/api/campaigns/'+editingCampaignId):'/api/campaigns',{method:wasEditing?'PATCH':'POST',body:JSON.stringify(payload)});
       cancelCampaignEdit();
-      notify(editingCampaignId?'Изменения сохранены!':'Кампания опубликована!');
+      notify(wasEditing?'Изменения сохранены!':'Кампания опубликована!');
       await loadMyCampaigns();await loadCampaigns();
     }catch(err){notify(err.message);}
   }
