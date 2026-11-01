@@ -52,7 +52,12 @@
         <textarea id="description" placeholder="Расскажи о своём блоге"></textarea>
         <button class="primary" type="submit">Сохранить профиль</button>
       </form>
-      <p class="note" id="profileNote">Подключение сохранения профиля будет активировано после настройки защищённого API.</p>
+      <p class="note" id="profileNote">Профиль можно сохранить и опубликовать в каталоге.</p>
+      <div class="section-head"><h2>Тарифы</h2></div>
+      <div class="cards">
+        <article class="card"><div class="card-body"><div class="name">FREE</div><div class="price">0 € / месяц</div><div class="desc">Профиль в каталоге и базовые возможности.</div></div></article>
+        <article class="card"><div class="card-body"><div class="name">PRO</div><div class="price">15 $ / месяц</div><div class="desc">Приоритетное продвижение и расширенное оформление профиля.</div><button class="small-btn" type="button" onclick="notify('Оплата PRO будет подключена отдельно.')">Выбрать PRO</button></div></article>
+      </div>
     </section>
     <section id="campaigns" class="view">
       <div class="section-head"><h2>Рекламные кампании</h2><span class="count" id="campaignCount">Открытые</span></div>
@@ -64,6 +69,9 @@
         <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
         <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
         <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea>
+        <label class="note" for="campaignImage">Изображение объявления: JPG, PNG или WEBP, до 5 МБ</label>
+        <input id="campaignImage" type="file" accept="image/jpeg,image/png,image/webp">
+        <img id="campaignImagePreview" alt="Предпросмотр" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:14px">
         <button class="primary" type="submit">Опубликовать кампанию</button>
       </form>
     </section>
@@ -127,14 +135,29 @@
     try{
       const items=await api('/api/campaigns');
       document.getElementById('campaignCount').textContent=items.length+' открытых';
-      box.innerHTML=items.length?items.map(x=>'<article class="card"><div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет кампаний. Рекламодатель может создать первую ниже.</div>';
+      box.innerHTML=items.length?items.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет кампаний. Рекламодатель может создать первую ниже.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
+  document.getElementById('campaignImage').addEventListener('change',e=>{
+    const file=e.target.files[0], preview=document.getElementById('campaignImagePreview');
+    if(!file){preview.style.display='none';return;}
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){notify('Выбери JPG, PNG или WEBP до 5 МБ');e.target.value='';preview.style.display='none';return;}
+    preview.src=URL.createObjectURL(file);preview.style.display='block';
+  });
   async function createCampaign(e){
     e.preventDefault();
-    const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim()};
-    try{await api('/api/campaigns',{method:'POST',body:JSON.stringify(payload)});e.target.reset();notify('Кампания опубликована!');loadCampaigns();}
-    catch(err){notify(err.message);}
+    const file=document.getElementById('campaignImage').files[0];
+    let image_url=null;
+    try{
+      if(file){
+        const upload=await fetch(API_BASE+'/api/upload-image',{method:'POST',headers:{'Content-Type':file.type,'X-Telegram-Init-Data':initData},body:file});
+        const result=await upload.json().catch(()=>({}));
+        if(!upload.ok)throw new Error(result.detail||'Не удалось загрузить изображение');
+        image_url=result.image_url;
+      }
+      const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url};
+      await api('/api/campaigns',{method:'POST',body:JSON.stringify(payload)});e.target.reset();document.getElementById('campaignImagePreview').style.display='none';notify('Кампания опубликована!');loadCampaigns();
+    }catch(err){notify(err.message);}
   }
   async function applyCampaign(id){
     const message=prompt('Коротко расскажи, почему ты подходишь для этой рекламы:');
