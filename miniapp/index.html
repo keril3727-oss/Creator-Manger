@@ -99,7 +99,7 @@
   // Replace this value with the public URL of the Render service.
   const API_BASE = "https://creator-manger.onrender.com";
   const initData = tg?.initData || "";
-  let selectedNiche="Все", bloggers=[];
+  let selectedNiche="Все", bloggers=[], savedProfilePhoto=null;
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   async function api(path, options={}) {
     if (API_BASE.includes("YOUR-RENDER-SERVICE")) throw new Error("Нужно указать адрес API Render");
@@ -148,10 +148,11 @@
     e.preventDefault();
     const file=document.getElementById('profilePhoto').files[0];
     try{
-      let photo_url=null;
+      let photo_url=savedProfilePhoto;
       if(file)photo_url=await uploadImage(file);
       const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),description:document.getElementById('description').value.trim(),photo_url,username:document.getElementById('profileUsername').value.trim().replace(/^@/,'')};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
+      savedProfilePhoto=photo_url;
       document.getElementById('profileNote').textContent='Профиль сохранён и опубликован в каталоге.';
       notify('Профиль сохранён!');loadBloggers();
     }catch(err){notify(err.message);}
@@ -194,7 +195,24 @@
   async function buyPro(asset){try{const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('proStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkPro(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
   async function checkPro(id){try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! PRO активен 30 дней.');document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
   async function loadPro(){try{const r=await api('/api/pro/status');if(r.active)document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}catch(e){}}
-  loadBloggers();loadPro();
+  async function loadMyProfile(){
+    try{
+      const p=await api('/api/profile/me');
+      if(!p || !p.telegram_id)return;
+      document.getElementById('displayName').value=p.display_name||'';
+      document.getElementById('profileUsername').value=p.username?'@'+p.username:'';
+      document.getElementById('nicheInput').value=p.niche||'';
+      document.getElementById('followers').value=p.followers??'';
+      document.getElementById('description').value=p.description||'';
+      savedProfilePhoto=p.photo_url||null;
+      if(savedProfilePhoto){
+        const preview=document.getElementById('profilePhotoPreview');
+        preview.src=savedProfilePhoto;preview.style.display='block';
+      }
+      document.getElementById('profileNote').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
+    }catch(e){document.getElementById('profileNote').textContent='Не удалось загрузить профиль: '+e.message;}
+  }
+  loadBloggers();loadPro();loadMyProfile();
 </script>
 </body>
 </html>
