@@ -225,14 +225,22 @@
       await loadBloggers();
     }catch(e){notify(e.message);}
   }
+  let catalogLoadVersion=0;
   async function loadBloggers(){
     const box=document.getElementById('cards');
+    const requestedKind=catalogKind;
+    const requestVersion=++catalogLoadVersion;
+    box.innerHTML='<div class="empty">Загружаю каталог…</div>';
     try {
-      bloggers=await api('/api/bloggers?kind='+encodeURIComponent(catalogKind));
+      const result=await api('/api/bloggers?kind='+encodeURIComponent(requestedKind));
+      // Ignore slower responses from a previously selected catalog.
+      if(requestVersion!==catalogLoadVersion||requestedKind!==catalogKind)return;
+      bloggers=Array.isArray(result)?result:[];
       renderCards();
     } catch(e) {
+      if(requestVersion!==catalogLoadVersion||requestedKind!==catalogKind)return;
       box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
-      document.getElementById('count').textContent='Каталог';
+      document.getElementById('count').textContent='Не удалось загрузить';
     }
   }
   function renderCards(){
