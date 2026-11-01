@@ -82,6 +82,7 @@
       <div class="cards">
         <article class="card"><div class="card-body"><div class="name">FREE</div><div class="price">0 € / месяц</div><div class="desc">Профиль в каталоге и базовые возможности.</div></div></article>
         <article class="card"><div class="card-body"><div class="name">PRO</div><div class="price">15 $ / месяц</div><div class="desc">Приоритетное продвижение и расширенное оформление профиля.</div><button class="small-btn" type="button" onclick="buyPro('USDT')">Оплатить PRO — 15 $ в USDT</button><button class="small-btn" type="button" onclick="buyPro('TON')">Оплатить PRO — 15 $ в TON</button><p class="note" id="proStatus">PRO на 30 дней.</p></div></article>
+        <article class="card"><div class="card-body"><div class="name">BUSINESS</div><div class="price">100 € / месяц</div><div class="desc">Без лимита бюджета кампании, несколько кампаний, расширенная аналитика и приоритетная поддержка.</div><p class="note" id="businessStatus">Business — для профессиональных рекламодателей.</p></div></article>
       </div>
     </section>
 
@@ -217,7 +218,7 @@
   }
   async function buyPro(asset){try{const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('proStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkPro(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
   async function checkPro(id){try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! PRO активен 30 дней.');document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
-  async function loadPro(){try{const r=await api('/api/pro/status');if(r.active)document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}catch(e){}}
+  async function loadPro(){try{const r=await api('/api/pro/status');if(r.plan==='business'){document.getElementById('businessStatus').textContent=r.admin?'Business активен для твоего аккаунта @verpot — бесплатно (админ-доступ).':'Business активен.';document.getElementById('proStatus').textContent='Доступ Business включает возможности PRO.';}else if(r.active){document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}}catch(e){}}
   async function loadMyProfile(){
     try{
       const p=await api('/api/profile/me');
