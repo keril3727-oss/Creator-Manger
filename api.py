@@ -211,6 +211,13 @@ async def campaigns():
         "status": "eq.open", "order": "created_at.desc",
     })
 
+@app.get("/api/campaigns/mine")
+async def my_campaigns(telegram_id: int = __import__("fastapi").Depends(user_id)):
+    return await db_request("GET", "campaigns", params={
+        "select": "id,advertiser_id,contact_username,title,description,niche,budget,currency,image_url,status,created_at",
+        "advertiser_id": f"eq.{telegram_id}", "order": "created_at.desc",
+    })
+
 @app.post("/api/campaigns")
 async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     admin_business = is_business_admin(init_data)
