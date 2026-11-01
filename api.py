@@ -215,7 +215,9 @@ async def verify_pro_invoice(invoice_id: str, telegram_id: int = __import__("fas
         return {"paid": False}
     import datetime
     base = datetime.datetime.now(datetime.timezone.utc)
-    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at,last_invoice_id", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    if rows and rows[0].get("last_invoice_id") == invoice_id:
+        return {"paid": True, "expires_at": rows[0].get("expires_at")}
     if rows and rows[0].get("expires_at"):
         try:
             old = datetime.datetime.fromisoformat(rows[0]["expires_at"].replace("Z", "+00:00"))
