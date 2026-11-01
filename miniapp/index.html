@@ -24,27 +24,31 @@
     .tariff-wrap{max-width:620px;margin:0 auto}.tariff-intro{text-align:center;padding:8px 8px 20px}.tariff-intro h1{font-size:29px;letter-spacing:-1px;margin:8px 0}.tariff-intro p{color:var(--muted);font-size:13px;margin:0}.tariff-switch{display:flex;gap:4px;background:#0b1c30;border:1px solid var(--line);padding:4px;border-radius:14px;margin:0 auto 18px;width:max-content}.tariff-switch button{border:0;border-radius:10px;padding:8px 14px;background:transparent;color:var(--muted);font-size:12px;font-weight:700}.tariff-switch button.active{background:#1b3856;color:var(--text)}.tariff-list{display:grid;gap:12px}.tariff-card{position:relative;border:1px solid #29435d;border-radius:22px;background:linear-gradient(160deg,#11253a,#0b1828);padding:19px;overflow:hidden}.tariff-card.featured{border-color:#67b7ff;box-shadow:0 0 0 1px #67b7ff22,0 15px 35px #0003}.tariff-card.business{background:linear-gradient(145deg,#182d43,#0c1a2a)}.tariff-top{display:flex;justify-content:space-between;align-items:center;gap:10px}.tariff-name{font-size:16px;font-weight:800;letter-spacing:-.3px}.tariff-pill{font-size:10px;font-weight:800;letter-spacing:.6px;border-radius:20px;padding:5px 9px;background:#1c4163;color:#9bd4ff}.tariff-price{font-size:32px;letter-spacing:-1.3px;font-weight:850;margin:15px 0 2px}.tariff-price small{font-size:12px;font-weight:500;letter-spacing:0;color:var(--muted)}.tariff-sub{font-size:12px;color:var(--muted);margin-bottom:15px}.tariff-features{list-style:none;padding:0;margin:0 0 17px;display:grid;gap:10px}.tariff-features li{font-size:13px;color:#d8e5f2;display:flex;gap:9px;align-items:flex-start}.tariff-features li:before{content:'✓';color:#75c7ff;font-weight:900}.tariff-action{width:100%;border-radius:13px;padding:12px 14px;border:1px solid #35516c;background:#152b41;color:#f0f7ff;font-weight:800}.tariff-card.featured .tariff-action{background:#f1f7fc;color:#102033;border-color:#f1f7fc}.tariff-foot{font-size:11px;color:var(--muted);text-align:center;margin:15px 0 0}.tariff-status{font-size:11px;color:#8edaff;margin-top:10px;line-height:1.4}
     @media(max-width:370px){.cards{grid-template-columns:1fr}.hero h1{font-size:24px}}
 
-    :root{color-scheme:light;--bg:#f4f6fb;--panel:#fff;--panel2:#f8faff;--blue:#2563eb;--cyan:#2563eb;--text:#172033;--muted:#718096;--line:#e5eaf2}
-    body{background:#f4f6fb;color:var(--text)}.app{max-width:1120px;padding:18px 22px 104px}
-    header{margin:4px 0 24px;padding-bottom:16px;border-bottom:1px solid var(--line)}.brand span{color:#2563eb}.avatar{background:#e8efff;color:#1d4ed8}
-    .hero{padding:27px;border:1px solid #dce7fb;border-radius:22px;background:linear-gradient(120deg,#eaf2ff,#f8fbff 70%);box-shadow:none;margin-bottom:18px}
-    .eyebrow{color:#2563eb}.hero h1{font-size:clamp(26px,4vw,36px);color:#172033}.hero p{color:#64748b}
-    .primary{background:#2563eb;color:#fff;box-shadow:0 7px 18px #2563eb24}.section-head h2{color:#172033}.count,.note{color:#718096}
-    .search,.form input,.form textarea,.form select{background:#fff;color:#172033;border:1px solid #dfe5ef;border-radius:12px}
-    .chip{background:#fff;color:#64748b;border-color:#e2e8f0}.chip.active{background:#eaf1ff;border-color:#bcd0ff;color:#1d4ed8}
-    .cards{gap:14px}.card{background:#fff;border:1px solid #e5eaf2;border-radius:16px;box-shadow:0 3px 12px #17203308}
-    .cover{background:linear-gradient(135deg,#dbeafe,#eff6ff);color:#2563eb}.name{color:#172033}.niche{color:#2563eb}.desc{color:#718096}.stats{color:#64748b}.price{color:#172033}
-    .small-btn{background:#eff4ff;border:1px solid #d8e5ff;color:#1d4ed8;border-radius:10px}.empty{border-color:#d8e0ec;color:#718096;background:#fff}
-    .tabs{background:#ffffffed;border-top:1px solid #e5eaf2;box-shadow:0 -5px 20px #17203308}.tab{color:#8491a5}.tab.active{color:#2563eb}
+    :root{color-scheme:dark;--bg:#071426;--panel:#0d2038;--panel2:#102945;--blue:#258bff;--cyan:#55c7ff;--text:#f3f8ff;--muted:#8fa8c4;--line:#1d3b5c}
+    body{background:radial-gradient(ellipse at 50% -20%,#123d69 0%,var(--bg) 58%);color:var(--text)}
+    .app{max-width:1120px;padding:18px 22px 104px}
+    header{margin:4px 0 24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+    .brand span{color:var(--cyan)}.avatar{background:linear-gradient(135deg,#258bff,#55c7ff);color:#061426}
+    .hero{padding:27px;border:1px solid #24517b;border-radius:22px;background:linear-gradient(120deg,#123d68,#102541 70%,#0c1c31);box-shadow:0 16px 40px #0004;margin-bottom:18px}
+    .eyebrow{color:#8edaff}.hero h1{font-size:clamp(26px,4vw,36px);color:var(--text)}.hero p{color:#b6cce2}
+    .primary{background:linear-gradient(100deg,#2187ff,#39b8ff);color:#04172b;box-shadow:0 8px 22px #168cff40}
+    .section-head h2{color:var(--text)}.count,.note{color:var(--muted)}
+    .search,.form input,.form textarea,.form select{background:#0b1c30;color:var(--text);border:1px solid var(--line);border-radius:12px}
+    .search:focus,.form input:focus,.form textarea:focus,.form select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #258bff20}
+    .chip{background:#0b1c30;color:#a9bfd6;border-color:var(--line)}.chip.active{background:#123c66;border-color:#258bff;color:#8edaff}
+    .cards{gap:14px}.card{background:linear-gradient(160deg,#102945,#0b1c30);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 24px #0002}
+    .cover{background:linear-gradient(135deg,#1e5c91,#132d4a);color:#8edaff}.name{color:var(--text)}.niche{color:#79cfff}.desc{color:var(--muted)}.stats{color:#b8cce0}.price{color:var(--text)}
+    .small-btn{background:#12365a;border:1px solid #267ac0;color:#a8ddff;border-radius:10px}.empty{border-color:#294867;color:var(--muted);background:#0b1c30}
+    .tabs{background:#08182aee;border-top:1px solid var(--line);box-shadow:0 -5px 20px #0003}.tab{color:#7794b2}.tab.active{color:#64caff}
     .form{gap:12px}.form input,.form textarea,.form select{padding:13px}
-    .tariff-card{background:#fff;border-color:#e2e8f0}.tariff-card.business{background:#f8fbff}.tariff-features li{color:#334155}.tariff-price{color:#172033}
-    .tariff-pill{background:#eaf1ff;color:#1d4ed8}.tariff-switch{background:#f1f5f9;border-color:#e2e8f0}.tariff-switch button.active{background:#fff;color:#172033}
-    .tariff-action{background:#f1f5f9;color:#172033;border-color:#e2e8f0}.tariff-card.featured .tariff-action{background:#2563eb;color:#fff;border-color:#2563eb}.tariff-status{color:#64748b}
+    .tariff-card{background:linear-gradient(160deg,#11253a,#0b1828);border-color:#29435d}.tariff-card.business{background:linear-gradient(145deg,#182d43,#0c1a2a)}.tariff-features li{color:#d8e5f2}.tariff-price{color:var(--text)}
+    .tariff-pill{background:#1c4163;color:#9bd4ff}.tariff-switch{background:#0b1c30;border-color:var(--line)}.tariff-switch button.active{background:#1b3856;color:var(--text)}
+    .tariff-action{background:#152b41;color:#f0f7ff;border-color:#35516c}.tariff-card.featured .tariff-action{background:linear-gradient(100deg,#2187ff,#39b8ff);color:#04172b;border-color:#258bff}.tariff-status{color:#8edaff}
     .role-switch{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 23px}
-    .role-card{display:flex;align-items:center;gap:13px;text-align:left;padding:16px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;color:#172033;box-shadow:0 3px 12px #17203306}
-    .role-card .role-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:#edf3ff;font-size:21px;flex:none}
-    .role-card strong{display:block;font-size:15px}.role-card small{display:block;color:#718096;font-size:11px;margin-top:3px}
-    .role-card:active{border-color:#2563eb;background:#f5f8ff}
+    .role-card{display:flex;align-items:center;gap:13px;text-align:left;padding:16px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(160deg,#102945,#0b1c30);color:var(--text);box-shadow:0 8px 24px #0002}
+    .role-card .role-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:#123c66;color:#8edaff;font-size:21px;flex:none}
+    .role-card strong{display:block;font-size:15px}.role-card small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+    .role-card:active{border-color:var(--blue);background:#102d4d}
     @media(max-width:700px){.app{padding:14px 14px 100px}.role-switch{gap:8px}.role-card{padding:12px;gap:9px}.role-card .role-icon{width:36px;height:36px}.role-card strong{font-size:13px}.role-card small{font-size:10px}.cards{grid-template-columns:1fr}}
   </style>
 </head>
