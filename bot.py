@@ -280,6 +280,10 @@ def main():
     if not TOKEN:
         raise RuntimeError("Не задан BOT_TOKEN")
 
+    base_url = os.getenv("WEBHOOK_URL")
+    if not base_url:
+        raise RuntimeError("Не задан WEBHOOK_URL")
+
     init_db()
 
     app = Application.builder().token(TOKEN).build()
@@ -292,7 +296,13 @@ def main():
         MessageHandler(filters.TEXT & ~filters.COMMAND, receive_message)
     )
 
-    app.run_polling()
+    port = int(os.getenv("PORT", "10000"))
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=port,
+        url_path="telegram",
+        webhook_url=f"{base_url.rstrip('/')}/telegram",
+    )
 
 
 if __name__ == "__main__":
