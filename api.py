@@ -35,7 +35,8 @@ def verify_init_data_full(init_data: str) -> dict:
         raise HTTPException(401, "Не удалось проверить пользователя Telegram")
     try:
         user = json.loads(values["user"])
-        user["id"] = int(user["id"])\n        return user
+        user["id"] = int(user["id"])
+        return user
     except Exception:
         raise HTTPException(401, "Не удалось определить Telegram-пользователя")
 
