@@ -273,7 +273,7 @@
     return result.image_url;
   }
   function contactBlogger(username){if(!username){notify('Не указан Telegram username');return;}const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
-  let profileSaving=false,savedProfilePhoto=null;
+  let profileSaving=false;
   async function saveProfile(e){
     e.preventDefault();if(profileSaving)return;
     const form=e.currentTarget,kind=form.dataset.kind,button=form.querySelector('button[type="submit"]'),note=form.querySelector('.profile-note');
