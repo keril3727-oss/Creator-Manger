@@ -285,36 +285,22 @@ async def receive_message(
     )
 
 
-def main():
+def build_application():
     if not TOKEN:
         raise RuntimeError("Не задан BOT_TOKEN")
-
-    # Render автоматически предоставляет публичный URL веб-сервиса.
-    # WEBHOOK_URL можно задать вручную, но это необязательно.
-    base_url = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
-    if not base_url:
-        raise RuntimeError("Не найден адрес сервиса: задайте WEBHOOK_URL или используйте Render Web Service")
-
     init_db()
-
-    app = Application.builder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("addad", addad))
-    app.add_handler(CommandHandler("myads", myads))
-    app.add_handler(CommandHandler("link", link))
-    app.add_handler(CallbackQueryHandler(button))
-    app.add_handler(
+    telegram_app = Application.builder().token(TOKEN).build()
+    telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(CommandHandler("addad", addad))
+    telegram_app.add_handler(CommandHandler("myads", myads))
+    telegram_app.add_handler(CommandHandler("link", link))
+    telegram_app.add_handler(CallbackQueryHandler(button))
+    telegram_app.add_handler(
         MessageHandler(filters.TEXT & ~filters.COMMAND, receive_message)
     )
-
-    port = int(os.getenv("PORT", "10000"))
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=port,
-        url_path="telegram",
-        webhook_url=f"{base_url.rstrip('/')}/telegram",
-    )
+    return telegram_app
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    uvicorn.run("api:app", host="0.0.0.0", port=int(os.getenv("PORT", "10000")))
