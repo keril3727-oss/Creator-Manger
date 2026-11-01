@@ -162,6 +162,16 @@ async def bloggers():
         "order": "created_at.desc",
     })
 
+@app.delete("/api/admin/bloggers")
+async def clear_test_bloggers(init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    # Global catalog cleanup is restricted to the verified business administrator.
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    return await db_request("DELETE", "bloggers", params={
+        "telegram_id": "not.is.null",
+    }, prefer="return=minimal")
+
+
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "bloggers", params={
