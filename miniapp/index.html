@@ -144,18 +144,36 @@
     return result.image_url;
   }
   function contactBlogger(username){if(!username){notify('Не указан Telegram username');return;}const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
+  let profileSaving=false;
   async function saveProfile(e){
     e.preventDefault();
-    const file=document.getElementById('profilePhoto').files[0];
+    if(profileSaving)return;
+    const form=e.currentTarget;
+    const button=form.querySelector('button[type="submit"]');
+    const note=document.getElementById('profileNote');
+    profileSaving=true;
+    button.disabled=true;
+    const previousText=button.textContent;
+    button.textContent='Сохраняю…';
+    note.textContent='Сохраняю профиль. Не закрывай приложение…';
     try{
+      const file=document.getElementById('profilePhoto').files[0];
       let photo_url=savedProfilePhoto;
       if(file)photo_url=await uploadImage(file);
       const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),description:document.getElementById('description').value.trim(),photo_url,username:document.getElementById('profileUsername').value.trim().replace(/^@/,'')};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       savedProfilePhoto=photo_url;
-      document.getElementById('profileNote').textContent='Профиль сохранён и опубликован в каталоге.';
-      notify('Профиль сохранён!');loadBloggers();
-    }catch(err){notify(err.message);}
+      note.textContent='Профиль сохранён и опубликован в каталоге.';
+      notify('Профиль сохранён!');
+      await loadBloggers();
+    }catch(err){
+      note.textContent='Не удалось сохранить: '+err.message;
+      notify(err.message);
+    }finally{
+      profileSaving=false;
+      button.disabled=false;
+      button.textContent=previousText;
+    }
   }
   async function loadCampaigns(){
     const box=document.getElementById('campaignList');
