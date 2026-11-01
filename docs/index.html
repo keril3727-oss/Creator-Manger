@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#071426">
+  <title>Creator Manager</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{color-scheme:dark;--bg:#071426;--panel:#0d2038;--panel2:#102945;--blue:#258bff;--cyan:#55c7ff;--text:#f3f8ff;--muted:#8fa8c4;--line:#1d3b5c}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#123d69 0%,var(--bg) 55%);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input{font:inherit}button{cursor:pointer}.app{max-width:720px;margin:auto;padding:18px 16px 92px}
+    header{display:flex;justify-content:space-between;align-items:center;margin:4px 0 22px}.brand{font-weight:850;letter-spacing:-.6px;font-size:21px}.brand span{color:var(--cyan)}.avatar{width:38px;height:38px;border-radius:14px;background:linear-gradient(135deg,#258bff,#55c7ff);display:grid;place-items:center;font-weight:800;color:#061426}
+    .hero{padding:21px;border:1px solid #24517b;border-radius:23px;background:linear-gradient(135deg,#123d68,#102541 68%,#0c1c31);box-shadow:0 16px 40px #0004;margin-bottom:22px}
+    .eyebrow{font-size:11px;color:#8edaff;text-transform:uppercase;letter-spacing:1.5px;font-weight:800}.hero h1{font-size:27px;line-height:1.12;letter-spacing:-.8px;margin:9px 0}.hero p{color:#b6cce2;margin:0 0 17px;max-width:440px}
+    .primary{border:0;border-radius:13px;padding:12px 16px;background:linear-gradient(100deg,#2187ff,#39b8ff);color:#04172b;font-weight:800;box-shadow:0 8px 22px #168cff40}
+    .section-head{display:flex;justify-content:space-between;align-items:center;margin:22px 0 12px}.section-head h2{font-size:18px;margin:0;letter-spacing:-.3px}.count{font-size:12px;color:var(--muted)}
+    .search{width:100%;border:1px solid var(--line);background:#0b1c30;color:var(--text);border-radius:14px;padding:13px 15px;outline:none;margin-bottom:11px}.search:focus{border-color:var(--blue)}
+    .chips{display:flex;gap:8px;overflow:auto;padding:1px 0 7px;scrollbar-width:none}.chip{white-space:nowrap;border:1px solid var(--line);border-radius:30px;padding:8px 13px;background:#0b1c30;color:#a9bfd6;font-size:12px}.chip.active{background:#123c66;border-color:#258bff;color:#8edaff}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:8px}.card{background:linear-gradient(160deg,#102945,#0b1c30);border:1px solid var(--line);border-radius:18px;overflow:hidden;min-width:0}.cover{height:105px;background:linear-gradient(135deg,#1e5c91,#132d4a);display:grid;place-items:center;font-size:35px}.card-body{padding:12px}.name{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.niche{color:#79cfff;font-size:11px;margin-top:3px}.desc{color:var(--muted);font-size:11px;margin:8px 0;min-height:31px}.stats{display:flex;justify-content:space-between;color:#b8cce0;font-size:11px;margin:9px 0}.price{font-size:13px;font-weight:800;margin:8px 0 10px}.small-btn{width:100%;border:1px solid #267ac0;background:#12365a;color:#a8ddff;border-radius:10px;padding:9px 6px;font-size:12px;font-weight:750}
+    .empty{border:1px dashed #294867;border-radius:16px;padding:22px;text-align:center;color:var(--muted);grid-column:1/-1}
+    .tabs{position:fixed;bottom:0;left:0;right:0;background:#08182aee;backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;justify-content:center;z-index:5}.tabs-inner{width:min(720px,100%);display:grid;grid-template-columns:repeat(3,1fr);padding:9px 12px calc(9px + env(safe-area-inset-bottom))}
+    .tab{border:0;background:none;color:#7794b2;font-size:11px;padding:5px}.tab b{display:block;font-size:19px;margin-bottom:2px}.tab.active{color:#64caff}
+    .view{display:none}.view.active{display:block}.form{display:grid;gap:10px}.form input,.form textarea,.form select{width:100%;border:1px solid var(--line);background:#0b1c30;color:var(--text);border-radius:12px;padding:12px;outline:none}.form textarea{min-height:90px;resize:vertical}.note{color:var(--muted);font-size:12px}
+    @media(max-width:370px){.cards{grid-template-columns:1fr}.hero h1{font-size:24px}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header><div class="brand">CREATOR <span>MANAGER</span></div><div class="avatar" id="avatar">CM</div></header>
+    <section id="catalog" class="view active">
+      <div class="hero"><div class="eyebrow">Реклама без лишних сообщений</div><h1>Находи блогеров.<br>Запускай рекламу.</h1><p>Каталог авторов, понятные предложения и заявки — всё в одном месте.</p><button class="primary" onclick="document.getElementById('search').focus()">Найти блогера&nbsp; →</button></div>
+      <div class="section-head"><h2>Каталог блогеров</h2><span class="count" id="count">Подборка</span></div>
+      <input id="search" class="search" placeholder="⌕  Имя или тематика блогера" oninput="renderCards()">
+      <div class="chips" id="chips">
+        <button class="chip active" data-niche="Все" onclick="setNiche(this)">Все</button>
+        <button class="chip" data-niche="Lifestyle" onclick="setNiche(this)">Lifestyle</button>
+        <button class="chip" data-niche="Красота" onclick="setNiche(this)">Красота</button>
+        <button class="chip" data-niche="Игры" onclick="setNiche(this)">Игры</button>
+        <button class="chip" data-niche="Бизнес" onclick="setNiche(this)">Бизнес</button>
+        <button class="chip" data-niche="Путешествия" onclick="setNiche(this)">Путешествия</button>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+    <section id="profile" class="view">
+      <div class="section-head"><h2>Мой профиль</h2></div>
+      <p class="note">Создай страницу блогера, чтобы рекламодатели могли найти тебя в каталоге.</p>
+      <form class="form" onsubmit="saveProfile(event)">
+        <input id="displayName" placeholder="Имя или название канала" required maxlength="60">
+        <input id="nicheInput" placeholder="Тематика (например, Lifestyle)" required maxlength="50">
+        <input id="followers" type="number" min="0" placeholder="Количество подписчиков" required>
+        <input id="price" placeholder="Цена рекламы (например, от 50 €)" maxlength="40">
+        <textarea id="description" placeholder="Расскажи о своём блоге"></textarea>
+        <button class="primary" type="submit">Сохранить профиль</button>
+      </form>
+      <p class="note" id="profileNote">Подключение сохранения профиля будет активировано после настройки защищённого API.</p>
+    </section>
+    <section id="requests" class="view">
+      <div class="section-head"><h2>Мои заявки</h2></div>
+      <div class="empty">Здесь будут входящие рекламные заявки и их статусы.</div>
+    </section>
+  </main>
+  <nav class="tabs"><div class="tabs-inner">
+    <button class="tab active" onclick="showView('catalog',this)"><b>⌕</b>Каталог</button>
+    <button class="tab" onclick="showView('profile',this)"><b>＋</b>Мой профиль</button>
+    <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
+  </div></nav>
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+  const samples = [
+    {name:"Алина • daily",niche:"Lifestyle",desc:"Повседневная жизнь, стиль и находки",followers:"24,8 тыс.",price:"от 45 €",icon:"✦"},
+    {name:"Beauty Room",niche:"Красота",desc:"Уход, косметика и честные обзоры",followers:"18,2 тыс.",price:"от 35 €",icon:"✧"},
+    {name:"GameZone",niche:"Игры",desc:"Стримы, обзоры и игровое сообщество",followers:"52 тыс.",price:"от 80 €",icon:"◈"},
+    {name:"Бизнес просто",niche:"Бизнес",desc:"Предпринимательство и личные финансы",followers:"12,6 тыс.",price:"от 60 €",icon:"↗"},
+    {name:"Travel Notes",niche:"Путешествия",desc:"Маршруты, отели и красивые места",followers:"31 тыс.",price:"от 70 €",icon:"⌁"},
+    {name:"Mila Blog",niche:"Lifestyle",desc:"Мода, уют и ежедневное вдохновение",followers:"9,4 тыс.",price:"от 25 €",icon:"♡"}
+  ];
+  let selectedNiche="Все";
+  function renderCards(){
+    const q=(document.getElementById('search').value||'').toLowerCase();
+    const list=samples.filter(x=>(selectedNiche==="Все"||x.niche===selectedNiche)&&(x.name+" "+x.niche+" "+x.desc).toLowerCase().includes(q));
+    document.getElementById('count').textContent=list.length+" профилей";
+    document.getElementById('cards').innerHTML=list.length?list.map((x,i)=>'<article class="card"><div class="cover">'+x.icon+'</div><div class="card-body"><div class="name">'+x.name+'</div><div class="niche">'+x.niche+'</div><div class="desc">'+x.desc+'</div><div class="stats"><span>◉ '+x.followers+'</span><span>Блогер</span></div><div class="price">'+x.price+'</div><button class="small-btn" onclick="requestAd()">Заказать рекламу</button></div></article>').join(''):'<div class="empty">Ничего не найдено. Попробуй другую тематику или запрос.</div>';
+  }
+  function setNiche(btn){selectedNiche=btn.dataset.niche;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===btn));renderCards()}
+  function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn))}
+  function requestAd(){if(tg)tg.showAlert('Отправка заявок подключится после настройки API.');else alert('Отправка заявок подключится после настройки API.')}
+  function saveProfile(e){e.preventDefault();document.getElementById('profileNote').textContent='Форма готова. Сохранение включим после подключения защищённого API и Telegram-проверки.';if(tg)tg.showAlert('Форма профиля заполнена. Сохранение скоро будет подключено.')}
+  renderCards();
+</script>
+</body>
+</html>
