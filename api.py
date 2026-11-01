@@ -8,6 +8,7 @@ from urllib.parse import parse_qsl
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from bot import build_application
@@ -69,6 +70,13 @@ async def lifespan(app: FastAPI):
     await telegram_app.shutdown()
 
 app = FastAPI(title="Creator Manager API", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://keril3727-oss.github.io"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Telegram-Init-Data"],
+)
 
 def user_id(x_telegram_init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     return verify_init_data(x_telegram_init_data)
