@@ -4,6 +4,7 @@ from telegram import (
     Update,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    WebAppInfo,
 )
 from telegram.ext import (
     Application,
@@ -98,7 +99,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/myads — посмотреть предложения\n"
         "/link — получить личную ссылку\n\n"
         "Рекламодатель может открыть личную ссылку блогера "
-        "и отправить заявку."
+        "и отправить заявку.",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(
+                "🚀 Открыть Creator Manager",
+                web_app=WebAppInfo(
+                    url="https://keril3727-oss.github.io/Creator-Manger/"
+                )
+            )]
+        ])
     )
 
 
