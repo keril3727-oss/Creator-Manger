@@ -45,7 +45,7 @@
       <div class="section-head"><h2>Мой профиль</h2></div>
       <p class="note">Создай страницу блогера, чтобы рекламодатели могли найти тебя в каталоге.</p>
       <form class="form" onsubmit="saveProfile(event)">
-        <input id="displayName" placeholder="Имя или название канала" required maxlength="60">
+        <input id="displayName" placeholder="Имя или название канала" required maxlength="60"><input id="profileUsername" placeholder="@username в Telegram" required minlength="5" maxlength="33">
         <input id="nicheInput" placeholder="Тематика (например, Lifestyle)" required maxlength="50">
         <input id="followers" type="number" min="0" placeholder="Количество подписчиков" required>
         <input id="price" placeholder="Цена рекламы (например, от 50 €)" maxlength="40">
@@ -66,7 +66,7 @@
         <input id="campaignNiche" placeholder="Тематика (например, Lifestyle)" required maxlength="60">
         <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
         <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
-        <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea>
+        <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea><input id="campaignContact" placeholder="@username рекламодателя для связи" required minlength="5" maxlength="33">
         <label class="note" for="campaignImage">Изображение объявления: JPG, PNG или WEBP, до 5 МБ</label>
         <input id="campaignImage" type="file" accept="image/jpeg,image/png,image/webp">
         <img id="campaignImagePreview" alt="Предпросмотр" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:14px">
@@ -81,7 +81,7 @@
       <div class="section-head"><h2>Тарифы Creator Manager</h2></div>
       <div class="cards">
         <article class="card"><div class="card-body"><div class="name">FREE</div><div class="price">0 € / месяц</div><div class="desc">Профиль в каталоге и базовые возможности.</div></div></article>
-        <article class="card"><div class="card-body"><div class="name">PRO</div><div class="price">15 $ / месяц</div><div class="desc">Приоритетное продвижение и расширенное оформление профиля.</div><button class="small-btn" type="button" onclick="notify('Оплата PRO пока не подключена.')">Выбрать PRO</button></div></article>
+        <article class="card"><div class="card-body"><div class="name">PRO</div><div class="price">15 $ / месяц</div><div class="desc">Приоритетное продвижение и расширенное оформление профиля.</div><button class="small-btn" type="button" onclick="buyPro('USDT')">Оплатить PRO — 15 $ в USDT</button><button class="small-btn" type="button" onclick="buyPro('TON')">Оплатить PRO — 15 $ в TON</button><p class="note" id="proStatus">PRO на 30 дней.</p></div></article>
       </div>
     </section>
 
@@ -143,17 +143,14 @@
     if(!upload.ok)throw new Error(result.detail||'Не удалось загрузить фото');
     return result.image_url;
   }
-  function contactBlogger(username,id){
-    if(username){const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
-    else {const url='tg://user?id='+id;if(tg)tg.openLink('https://t.me/'+id);else window.open(url,'_blank');}
-  }
+  function contactBlogger(username){if(!username){notify('Не указан Telegram username');return;}const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
   async function saveProfile(e){
     e.preventDefault();
     const file=document.getElementById('profilePhoto').files[0];
     try{
       let photo_url=null;
       if(file)photo_url=await uploadImage(file);
-      const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),description:document.getElementById('description').value.trim(),photo_url};
+      const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),description:document.getElementById('description').value.trim(),photo_url,username:document.getElementById('profileUsername').value.trim().replace(/^@/,'')};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       document.getElementById('profileNote').textContent='Профиль сохранён и опубликован в каталоге.';
       notify('Профиль сохранён!');loadBloggers();
@@ -184,7 +181,7 @@
         if(!upload.ok)throw new Error(result.detail||'Не удалось загрузить изображение');
         image_url=result.image_url;
       }
-      const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url};
+      const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url,contact_username:document.getElementById('campaignContact').value.trim().replace(/^@/,'')};
       await api('/api/campaigns',{method:'POST',body:JSON.stringify(payload)});e.target.reset();document.getElementById('campaignImagePreview').style.display='none';notify('Кампания опубликована!');loadCampaigns();
     }catch(err){notify(err.message);}
   }
@@ -194,7 +191,10 @@
     try{await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});notify('Отклик отправлен!');}
     catch(err){notify(err.message);}
   }
-  loadBloggers();
+  async function buyPro(asset){try{const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('proStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkPro(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
+  async function checkPro(id){try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! PRO активен 30 дней.');document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
+  async function loadPro(){try{const r=await api('/api/pro/status');if(r.active)document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}catch(e){}}
+  loadBloggers();loadPro();
 </script>
 </body>
 </html>
