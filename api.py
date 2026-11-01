@@ -138,8 +138,14 @@ async def bloggers():
     })
 
 @app.post("/api/profile")
-async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi").Depends(user_id)):
+async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     payload = profile.model_dump()
+    values = dict(parse_qsl(init_data, keep_blank_values=True))
+    try:
+        telegram_user = json.loads(values.get("user", "{}"))
+        payload["username"] = telegram_user.get("username")
+    except Exception:
+        payload["username"] = None
     payload["telegram_id"] = telegram_id
     result = await db_request("POST", "bloggers", params={"on_conflict": "telegram_id"}, payload=payload)
     return result
