@@ -58,7 +58,11 @@
       <div id="adminCatalogTools" style="display:none;margin:-3px 0 12px">
         <button class="small-btn" type="button" style="border-color:#9a4b55;color:#ffb4bd" onclick="clearTestBloggers()">Очистить все тестовые профили</button>
       </div>
-      <input id="search" class="search" placeholder="⌕  Имя или тематика блогера" oninput="renderCards()">
+      <div class="tariff-switch" style="margin:0 0 12px 0">
+        <button id="authorsTab" class="active" type="button" onclick="setCatalogKind('author')">Авторы</button>
+        <button id="channelsTab" type="button" onclick="setCatalogKind('channel')">TG-каналы</button>
+      </div>
+      <input id="search" class="search" placeholder="⌕  Имя или тематика" oninput="renderCards()">
       <div class="chips" id="chips">
         <button class="chip active" data-niche="Все" onclick="setNiche(this)">Все</button>
         <button class="chip" data-niche="Lifestyle" onclick="setNiche(this)">Lifestyle</button>
@@ -73,7 +77,9 @@
       <div class="section-head"><h2>Продать рекламу</h2></div>
       <p class="note">Добавь свой блог или Telegram-канал в каталог, укажи охваты и цены — рекламодатели смогут находить тебя и обращаться напрямую.</p>
       <form class="form" onsubmit="saveProfile(event)">
-        <input id="displayName" placeholder="Имя или название канала" required maxlength="60"><input id="profileUsername" placeholder="@username в Telegram" required minlength="5" maxlength="33">
+        <select id="platformType" onchange="toggleChannelUrl()"><option value="author">Автор</option><option value="channel">TG-канал</option></select>
+        <input id="displayName" placeholder="Имя автора или название канала" required maxlength="60"><input id="profileUsername" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
+        <div id="channelUrlWrap" style="display:none"><input id="channelUrl" placeholder="Ссылка на TG-канал (https://t.me/...)"><p class="note">Укажи публичную ссылку на канал.</p></div>
         <input id="nicheInput" placeholder="Тематика канала (например, Lifestyle)" required maxlength="50">
         <input id="followers" type="number" min="0" placeholder="Количество подписчиков" required>
         <input id="reach" type="number" min="0" placeholder="Средние охваты публикации" required>
@@ -138,7 +144,7 @@
   const API_BASE = "https://creator-manger.onrender.com";
   const initData = tg?.initData || "";
   const telegramUser = tg?.initDataUnsafe?.user || null;
-  let selectedNiche="Все", bloggers=[], savedProfilePhoto=null;
+  let selectedNiche="Все", bloggers=[], savedProfilePhoto=null, catalogKind="author";
   function applyTelegramAccount(){
     if(!telegramUser)return;
     const fullName=[telegramUser.first_name,telegramUser.last_name].filter(Boolean).join(" ").trim();
@@ -199,7 +205,7 @@
   async function loadBloggers(){
     const box=document.getElementById('cards');
     try {
-      bloggers=await api('/api/bloggers');
+      bloggers=await api('/api/bloggers?kind='+encodeURIComponent(catalogKind));
       renderCards();
     } catch(e) {
       box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
@@ -210,9 +216,11 @@
     const q=(document.getElementById('search').value||'').toLowerCase();
     const list=bloggers.filter(x=>(selectedNiche==="Все"||x.niche===selectedNiche)&&
       (x.display_name+" "+x.niche+" "+(x.description||"")+" "+(x.ad_formats||"")).toLowerCase().includes(q));
-    document.getElementById('count').textContent=list.length+" профилей";
-    document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">Канал: '+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей. Стань первым блогером — заполни профиль.</div>';
+    document.getElementById('count').textContent=list.length+(catalogKind==="author"?" авторов":" каналов");
+    document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
   }
+  function setCatalogKind(kind){catalogKind=kind;document.getElementById('authorsTab').classList.toggle('active',kind==='author');document.getElementById('channelsTab').classList.toggle('active',kind==='channel');loadBloggers();}
+  function toggleChannelUrl(){const channel=document.getElementById('platformType').value==='channel';document.getElementById('channelUrlWrap').style.display=channel?'block':'none';document.getElementById('channelUrl').required=channel;}
   function setNiche(btn){selectedNiche=btn.dataset.niche;document.querySelectorAll('.chip').forEach(x=>x.classList.toggle('active',x===btn));renderCards()}
   function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='campaigns')loadCampaigns()}
   function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*="catalog"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('profile',document.querySelector('.tab[onclick*="profile"]'));document.getElementById('displayName').scrollIntoView({behavior:'smooth',block:'center'});}}
@@ -245,7 +253,10 @@
       const file=document.getElementById('profilePhoto').files[0];
       let photo_url=savedProfilePhoto;
       if(file)photo_url=await uploadImage(file);
-      const profile={display_name:document.getElementById('displayName').value.trim(),niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),reach:Number(document.getElementById('reach').value),ad_formats:document.getElementById('adFormats').value.trim(),price:document.getElementById('price').value.trim(),description:document.getElementById('description').value.trim(),photo_url,username:(telegramUser?.username||document.getElementById('profileUsername').value.trim().replace(/^@/,''))};
+      const platform_type=document.getElementById('platformType').value;
+      const channel_url=document.getElementById('channelUrl').value.trim()||null;
+      if(platform_type==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
+      const profile={display_name:document.getElementById('displayName').value.trim(),platform_type,channel_url,niche:document.getElementById('nicheInput').value.trim(),followers:Number(document.getElementById('followers').value),reach:Number(document.getElementById('reach').value),ad_formats:document.getElementById('adFormats').value.trim(),price:document.getElementById('price').value.trim(),description:document.getElementById('description').value.trim(),photo_url,username:(telegramUser?.username||document.getElementById('profileUsername').value.trim().replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       savedProfilePhoto=photo_url;
       note.textContent='Профиль сохранён и опубликован в каталоге.';
@@ -390,6 +401,7 @@
     try{
       const p=await api('/api/profile/me');
       if(!p || !p.telegram_id)return;
+      document.getElementById('platformType').value=p.platform_type||'author';toggleChannelUrl();document.getElementById('channelUrl').value=p.channel_url||'';
       document.getElementById('displayName').value=p.display_name||'';
       document.getElementById('profileUsername').value=p.username?'@'+p.username:'';
       document.getElementById('nicheInput').value=p.niche||'';
