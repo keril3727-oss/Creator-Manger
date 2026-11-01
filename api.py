@@ -94,7 +94,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://keril3727-oss.github.io"],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Telegram-Init-Data"],
 )
 
@@ -240,6 +240,33 @@ async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fas
     payload["contact_username"] = payload["contact_username"].lstrip("@")
     payload["advertiser_id"] = telegram_id
     return await db_request("POST", "campaigns", payload=payload)
+
+@app.patch("/api/campaigns/{campaign_id}")
+async def update_campaign(campaign_id: int, campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    owned = await db_request("GET", "campaigns", params={
+        "select": "id", "id": f"eq.{campaign_id}",
+        "advertiser_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    if not owned:
+        raise HTTPException(404, "Объявление не найдено или принадлежит другому аккаунту")
+    payload = campaign.model_dump()
+    payload["contact_username"] = payload["contact_username"].lstrip("@")
+    return await db_request("PATCH", "campaigns", params={
+        "id": f"eq.{campaign_id}", "advertiser_id": f"eq.{telegram_id}",
+    }, payload=payload)
+
+@app.delete("/api/campaigns/{campaign_id}")
+async def delete_campaign(campaign_id: int, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    owned = await db_request("GET", "campaigns", params={
+        "select": "id", "id": f"eq.{campaign_id}",
+        "advertiser_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    if not owned:
+        raise HTTPException(404, "Объявление не найдено или принадлежит другому аккаунту")
+    await db_request("DELETE", "campaigns", params={
+        "id": f"eq.{campaign_id}", "advertiser_id": f"eq.{telegram_id}",
+    }, prefer="return=minimal")
+    return {"ok": True}
 
 @app.post("/api/campaigns/{campaign_id}/apply")
 async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
