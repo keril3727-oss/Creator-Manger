@@ -191,7 +191,10 @@
     try{await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});notify('Отклик отправлен!');}
     catch(err){notify(err.message);}
   }
-  loadBloggers();
+  async function buyPro(asset){try{const r=await api('/api/pro/create-invoice',{method:'POST',body:JSON.stringify({asset})});if(!r.pay_url)throw new Error('Ссылка оплаты не получена');if(tg)tg.openLink(r.pay_url);else window.open(r.pay_url,'_blank');document.getElementById('proStatus').innerHTML='Счёт создан. После оплаты нажми <button class="small-btn" onclick="checkPro(\''+r.invoice_id+'\')">Проверить оплату</button>';}catch(e){notify(e.message);}}
+  async function checkPro(id){try{const r=await api('/api/pro/verify/'+encodeURIComponent(id),{method:'POST'});if(r.paid){notify('Оплата подтверждена! PRO активен 30 дней.');document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}else notify('Платёж пока не найден. Проверь позже.');}catch(e){notify(e.message);}}
+  async function loadPro(){try{const r=await api('/api/pro/status');if(r.active)document.getElementById('proStatus').textContent='PRO активен до '+r.expires_at;}catch(e){}}
+  loadBloggers();loadPro();
 </script>
 </body>
 </html>
