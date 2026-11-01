@@ -189,7 +189,11 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
         if highest_price > 70:
             raise HTTPException(403, "На Free цена рекламы в профиле — максимум 70 €. Подключи Pro или Business, чтобы указать больше.")
     payload = profile.model_dump()
-    payload["username"] = payload["username"].lstrip("@")
+    telegram_user = verify_init_data_full(init_data)
+    telegram_username = str(telegram_user.get("username") or "").strip()
+    if not telegram_username:
+        raise HTTPException(400, "Добавь username в настройках Telegram, чтобы создать профиль")
+    payload["username"] = telegram_username
     payload["telegram_id"] = telegram_id
     existing = await db_request("GET", "bloggers", params={
         "select": "telegram_id", "telegram_id": f"eq.{telegram_id}", "limit": "1",
