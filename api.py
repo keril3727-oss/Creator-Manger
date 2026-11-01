@@ -37,14 +37,14 @@ def verify_init_data(init_data: str) -> int:
     except Exception:
         raise HTTPException(401, "Не удалось определить Telegram-пользователя")
 
-async def db_request(method: str, table: str, *, params=None, payload=None):
+async def db_request(method: str, table: str, *, params=None, payload=None, prefer="return=representation"):
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise HTTPException(503, "Supabase пока не настроен на сервере")
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
         "Content-Type": "application/json",
-        "Prefer": "return=representation",
+        "Prefer": prefer,
     }
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.request(
