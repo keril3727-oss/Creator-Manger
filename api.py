@@ -192,12 +192,27 @@ async def campaigns():
 async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     admin_business = is_business_admin(init_data)
     sub_rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at,plan", "user_id": f"eq.{telegram_id}", "limit": "1"})
-    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now)
+    now_dt = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now_dt)
     plan = sub_rows[0].get("plan", "pro") if sub_active and sub_rows else "free"
-    max_budget = float("inf") if admin_business or (sub_active and plan == "business") else (400 if sub_active else 70)
+
+    # Monthly advertiser publishing quotas: Free 0, Pro 2, Business 50.
+    monthly_limits = {"free": 0, "pro": 2, "business": 50}
+    limit = 50 if admin_business else monthly_limits.get(plan, 0)
+    month_start = time.strftime("%Y-%m-01T00:00:00Z", time.gmtime())
+    month_campaigns = await db_request("GET", "campaigns", params={
+        "select": "id", "advertiser_id": f"eq.{telegram_id}",
+        "created_at": f"gte.{month_start}",
+    })
+    if len(month_campaigns) >= limit:
+        if limit == 0:
+            raise HTTPException(403, "Для публикации объявления подключи Pro (до 2 в месяц) или Business (до 50 в месяц).")
+        raise HTTPException(403, f"Месячный лимит объявлений исчерпан: {limit}. Перейди на Business для 50 объявлений в месяц." if plan == "pro" else "Лимит Business — 50 объявлений в месяц.")
+
+    max_budget = float("inf") if admin_business or (sub_active and plan == "business") else (400 if sub_active and plan == "pro" else 70)
     if campaign.currency == "EUR" and campaign.budget > max_budget:
-        raise HTTPException(403, "Лимит кампании: " + ("без ограничений для Business" if admin_business else ("400 € для PRO" if pro_active else "70 € для обычного тарифа")))
+        budget_text = "без ограничений для Business" if admin_business or (sub_active and plan == "business") else ("400 € для PRO" if sub_active and plan == "pro" else "70 € для Free")
+        raise HTTPException(403, "Лимит бюджета кампании: " + budget_text)
     payload = campaign.model_dump()
     payload["contact_username"] = payload["contact_username"].lstrip("@")
     payload["advertiser_id"] = telegram_id
