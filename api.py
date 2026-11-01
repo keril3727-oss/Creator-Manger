@@ -103,6 +103,8 @@ def user_id(x_telegram_init_data: str = Header(default="", alias="X-Telegram-Ini
 
 class Profile(BaseModel):
     display_name: str = Field(min_length=1, max_length=60)
+    platform_type: str = Field(default="author", pattern="^(author|channel)$")
+    channel_url: str | None = Field(default=None, max_length=200)
     niche: str = Field(min_length=1, max_length=50)
     followers: int = Field(ge=0, le=2_000_000_000)
     reach: int = Field(ge=0, le=2_000_000_000)
@@ -156,9 +158,12 @@ async def health():
     return {"status": "ok"}
 
 @app.get("/api/bloggers")
-async def bloggers():
+async def bloggers(kind: str = "author"):
+    if kind not in ("author", "channel"):
+        raise HTTPException(400, "Неизвестный тип площадки")
     return await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,niche,description,followers,reach,ad_formats,price,photo_url",
+        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url",
+        "platform_type": f"eq.{kind}",
         "order": "created_at.desc",
     })
 
@@ -175,7 +180,7 @@ async def clear_test_bloggers(init_data: str = Header(default="", alias="X-Teleg
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,niche,description,followers,reach,ad_formats,price,photo_url",
+        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url",
         "telegram_id": f"eq.{telegram_id}", "limit": "1",
     })
     return rows[0] if rows else {}
