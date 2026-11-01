@@ -191,7 +191,7 @@ async def campaigns():
 @app.post("/api/campaigns")
 async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     admin_business = is_business_admin(init_data)
-    sub_rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
+    sub_rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at,plan", "user_id": f"eq.{telegram_id}", "limit": "1"})
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now)
     plan = sub_rows[0].get("plan", "pro") if sub_active and sub_rows else "free"
