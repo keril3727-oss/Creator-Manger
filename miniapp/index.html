@@ -134,22 +134,29 @@
       </form>
       <p class="note">Free: до 70 € за рекламу. Pro и Business: без лимита цены.</p>
     </section>
-    <section id="campaigns" class="view">
-      <div class="section-head"><h2>Мои объявления</h2><span class="count">Управление</span></div>
+    <section id="buyAds" class="view">
+      <div class="section-head"><h2>Купить рекламу</h2><span class="count" id="campaignCount">Объявления</span></div>
+      <p class="note">Выбирай предложение компании, изучай бюджет и требования, затем отправляй отклик. Компания увидит заявку по своему объявлению.</p>
+      <select id="campaignTopicFilter" class="search" onchange="loadCampaigns()"><option value="Все">Все тематики</option><option value="Образование">Образование</option><option value="Наука">Наука</option><option value="Технологии">Технологии</option><option value="IT и программирование">IT и программирование</option><option value="Бизнес">Бизнес</option><option value="Финансы">Финансы</option><option value="Маркетинг">Маркетинг</option><option value="Недвижимость">Недвижимость</option><option value="Авто и транспорт">Авто и транспорт</option><option value="Путешествия">Путешествия</option><option value="Спорт и фитнес">Спорт и фитнес</option><option value="Инвестиции">Инвестиции</option><option value="Автомобили и мото">Автомобили и мото</option><option value="Знакомства и отношения">Знакомства и отношения</option><option value="Еда и рестораны">Еда и рестораны</option><option value="Другое">Другое</option></select>
+      <div id="campaignList" class="cards"><div class="empty">Загружаю объявления…</div></div>
+    </section>
+    <section id="buyCampaign" class="view">
+      <div class="section-head"><h2>Закупить рекламу</h2><span class="count">Для компаний</span></div>
+      <p class="note">Создай рекламное объявление: опиши продукт, бюджет и требования к блогеру. После публикации оно появится в «Купить рекламу».</p>
+      <div class="section-head"><h3>Мои объявления</h3><span class="count">Управление</span></div>
       <div id="myCampaignList" class="cards"><div class="empty">Загружаю твои объявления…</div></div>
-      <div class="section-head"><h2>Каталог объявлений компаний</h2><span class="count" id="campaignCount">Открытые</span></div><select id="campaignTopicFilter" class="search" onchange="loadCampaigns()"><option value="Все">Все тематики</option><option value="Образование">Образование</option><option value="Наука">Наука</option><option value="Технологии">Технологии</option><option value="IT и программирование">IT и программирование</option><option value="Бизнес">Бизнес</option><option value="Финансы">Финансы</option><option value="Маркетинг">Маркетинг</option><option value="Недвижимость">Недвижимость</option><option value="Авто и транспорт">Авто и транспорт</option><option value="Путешествия">Путешествия</option><option value="Спорт и фитнес">Спорт и фитнес</option><option value="Инвестиции">Инвестиции</option><option value="Автомобили и мото">Автомобили и мото</option><option value="Знакомства и отношения">Знакомства и отношения</option><option value="Еда и рестораны">Еда и рестораны</option><option value="Другое">Другое</option></select>
-      <div id="campaignList" class="cards"><div class="empty">Загружаю кампании…</div></div>
-      <div class="section-head"><h2>Опубликовать объявление</h2></div>
+      <div class="section-head"><h3>Новое объявление</h3></div>
       <form class="form" onsubmit="createCampaign(event)">
-        <input id="campaignTitle" placeholder="Название кампании" required maxlength="100">
-        <input id="campaignNiche" type="hidden" required><div class="topic-picker" data-topic-picker="campaign"><div class="topic-head"><span>Выбери тематики объявления — до 5</span><span class="topic-count">0/5</span></div><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
-        <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
+        <input id="campaignTitle" placeholder="Название кампании / что рекламируем" required maxlength="100">
+        <input id="campaignNiche" type="hidden" required><div class="topic-picker" data-topic-picker="campaign"><div class="topic-head"><span>Тематики — до 5</span><span class="topic-count">0/5</span></div><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
+        <textarea id="campaignDescription" placeholder="Требования к блогеру, формат рекламы, сроки, условия и что нужно сделать" rows="5"></textarea>
+        <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет на рекламу" required>
         <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
-        <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea><input id="campaignContact" placeholder="@username рекламодателя для связи" required minlength="5" maxlength="33">
-        <label class="note" for="campaignImage">Изображение объявления: JPG, PNG или WEBP, до 5 МБ</label>
+        <input id="campaignContact" placeholder="@username для связи" required minlength="5" maxlength="33">
+        <label class="note" for="campaignImage">Изображение: JPG, PNG или WEBP, до 5 МБ</label>
         <input id="campaignImage" type="file" accept="image/jpeg,image/png,image/webp">
         <img id="campaignImagePreview" alt="Предпросмотр" style="display:none;width:100%;max-height:220px;object-fit:cover;border-radius:14px">
-        <button class="primary" type="submit" id="campaignSubmit">Опубликовать кампанию</button>
+        <button class="primary" type="submit" id="campaignSubmit">Опубликовать объявление</button>
         <button class="small-btn" type="button" id="cancelCampaignEdit" style="display:none" onclick="cancelCampaignEdit()">Отменить редактирование</button>
       </form>
     </section>
@@ -173,7 +180,8 @@
   <nav class="tabs"><div class="tabs-inner">
     <button class="tab active" onclick="showView('catalog',this)"><b>⌕</b>Каталог</button>
     <button class="tab" onclick="showView('profile',this)"><b>＋</b>Профиль</button>
-    <button class="tab" onclick="showView('campaigns',this)"><b>▣</b>Кампании</button>
+    <button class="tab" onclick="showView('buyAds',this)"><b>⌕</b>Купить рекламу</button>
+    <button class="tab" onclick="showView('buyCampaign',this)"><b>＋</b>Закупить рекламу</button>
     <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
     <button class="tab" onclick="showView('tariffs',this)"><b>◇</b>Тарифы</button>
   </div></nav>
@@ -289,7 +297,7 @@
     document.getElementById('channelFormTab').classList.toggle('active',kind==='channel');
   }
   function setNiche(btn){selectedNiche=btn.dataset.niche;renderCatalogTopics();renderCards()}
-  function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='campaigns')loadCampaigns()}
+  function showView(id,btn){document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===btn));if(id==='buyAds')loadCampaigns();if(id==='buyCampaign')loadMyCampaigns()}
   function openRole(role){if(role==='buy'){showView('catalog',document.querySelector('.tab[onclick*="catalog"]'));document.getElementById('search').focus({preventScroll:true});}else{showView('profile',document.querySelector('.tab[onclick*="profile"]'));switchProfileForm(catalogKind==='channel'?'channel':'author');document.querySelector('#profile form[style*="grid"]')?.scrollIntoView({behavior:'smooth',block:'center'});}}
   document.querySelectorAll('.profile-form input[name="photo"]').forEach(input=>input.addEventListener('change',e=>{
     const file=e.target.files[0], preview=e.target.form.querySelector('.profile-preview');
