@@ -425,6 +425,7 @@
       const kind=p.platform_type==='channel'?'channel':'author';
       const form=document.getElementById(kind==='channel'?'channelProfileForm':'authorProfileForm');
       switchProfileForm(kind);
+      const topicPicker=form.querySelector('.topic-picker');if(topicPicker)initTopicPicker(topicPicker,p.niche||'');
       for(const [key,value] of Object.entries({display_name:p.display_name,username:p.username?'@'+p.username:'',channel_url:p.channel_url||'',niche:p.niche,followers:p.followers,reach:p.reach,ad_formats:p.ad_formats,price:p.price,description:p.description})){
         const field=form.elements.namedItem(key);if(field)field.value=value??'';
       }
