@@ -246,7 +246,7 @@
   }
   function renderCards(){
     const q=(document.getElementById('search').value||'').toLowerCase();
-    const list=bloggers.filter(x=>(selectedNiche==="Все"||topicNormalize(x.niche).includes(selectedNiche))&&
+    const list=bloggers.filter(x=>(selectedNiche==="Все"||(x.niche||"").toLowerCase().includes(selectedNiche.toLowerCase()))&&
       (x.display_name+" "+x.niche+" "+(x.description||"")+" "+(x.ad_formats||"")).toLowerCase().includes(q));
     document.getElementById('count').textContent=list.length+(catalogKind==="author"?" авторов":" каналов");
     document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
@@ -285,7 +285,7 @@
       if(file)photo_url=await uploadImage(file);
       const channel_url=kind==='channel'?val('channel_url'):null;
       if(kind==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
-      const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),topics:topicNormalize(val('niche')),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
+      const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       savedProfilePhoto=photo_url;note.textContent='Профиль сохранён и опубликован в каталоге.';notify('Профиль сохранён!');await loadBloggers();
     }catch(err){note.textContent='Не удалось сохранить: '+err.message;notify(err.message);}
@@ -339,7 +339,7 @@
     try{
       const items=await api('/api/campaigns');
       const selectedCampaignTopic=document.getElementById('campaignTopicFilter')?.value||'Все';
-      const filteredItems=selectedCampaignTopic==='Все'?items:items.filter(x=>topicNormalize(x.niche).includes(selectedCampaignTopic));
+      const filteredItems=selectedCampaignTopic==='Все'?items:items.filter(x=>(x.niche||'').toLowerCase().includes(selectedCampaignTopic.toLowerCase()));
       document.getElementById('campaignCount').textContent=filteredItems.length+' открытых';
       box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
@@ -428,7 +428,6 @@
       for(const [key,value] of Object.entries({display_name:p.display_name,username:p.username?'@'+p.username:'',channel_url:p.channel_url||'',niche:p.niche,followers:p.followers,reach:p.reach,ad_formats:p.ad_formats,price:p.price,description:p.description})){
         const field=form.elements.namedItem(key);if(field)field.value=value??'';
       }
-      loadTopicValue(kind,p.niche||'');
       savedProfilePhoto=p.photo_url||null;
       if(savedProfilePhoto){const preview=form.querySelector('.profile-preview');preview.src=savedProfilePhoto;preview.style.display='block';}
       form.querySelector('.profile-note').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
@@ -442,7 +441,6 @@
   window.addEventListener('error',e=>{const box=document.getElementById('proStatus');if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');});
   window.buyPro = buyPro;
   window.buyBusiness = buyBusiness;
-  topicPickerInit();
   applyTelegramAccount();
   loadBloggers();loadPro();loadMyProfile();
 </script>
