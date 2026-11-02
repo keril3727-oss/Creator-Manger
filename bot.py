@@ -104,7 +104,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton(
                 "🚀 Открыть Creator Manager",
                 web_app=WebAppInfo(
-                    url="https://keril3727-oss.github.io/Creator-Manger/miniapp/?v=20261101-9"
+                    url="https://keril3727-oss.github.io/Creator-Manger/miniapp/?v=20261102-15topics"
                 )
             )]
         ])
