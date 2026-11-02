@@ -358,10 +358,16 @@
   }
   function cancelCampaignEdit(){
     editingCampaignId=null;editingCampaignImage=null;
-    document.querySelector('#campaigns form').reset();
-    document.getElementById('campaignImagePreview').style.display='none';initTopicPicker(document.querySelector('[data-topic-picker="campaign"]'));
-    document.getElementById('campaignSubmit').textContent='Опубликовать кампанию';
-    document.getElementById('cancelCampaignEdit').style.display='none';
+    const form=document.querySelector('#buyCampaign form')||document.querySelector('#campaigns form');
+    if(form)form.reset();
+    const preview=document.getElementById('campaignImagePreview');
+    if(preview)preview.style.display='none';
+    const picker=document.querySelector('[data-topic-picker="campaign"]');
+    if(picker)initTopicPicker(picker);
+    const submit=document.getElementById('campaignSubmit');
+    if(submit)submit.textContent='Опубликовать объявление';
+    const cancel=document.getElementById('cancelCampaignEdit');
+    if(cancel)cancel.style.display='none';
   }
   async function removeCampaign(id){
     if(!confirm('Удалить это объявление?'))return;
