@@ -81,7 +81,7 @@
         <button id="channelFormTab" style="flex:1" type="button" onclick="switchProfileForm('channel')">У меня TG-канал</button>
       </div>
       <p class="note">Выбери тип площадки — для каждого свой набор полей. Контакт для связи берётся из твоего Telegram.</p>
-      <form class="form profile-form" id="authorProfileForm" data-kind="author" onsubmit="saveProfile(event)">
+      <form class="form profile-form" id="authorProfileForm" data-kind="author" >
         <input name="display_name" placeholder="Имя блогера / название блога" required maxlength="60">
         <input name="username" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
         <input name="niche" type="hidden" required><div class="topic-picker" data-topic-picker="authorProfileForm"><div class="topic-head"><span>Тематики блога — до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Если выбрано «Другое», впиши нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
@@ -450,6 +450,15 @@
   window.addEventListener('error',e=>{const box=document.getElementById('proStatus');if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');});
   window.buyPro = buyPro;
   window.buyBusiness = buyBusiness;
+  document.querySelectorAll('.profile-form').forEach(form=>{
+    form.addEventListener('submit',event=>saveProfile(event));
+    const submit=form.querySelector('button[type="submit"]');
+    if(submit)submit.addEventListener('click',()=>{
+      const note=form.querySelector('.profile-note');
+      if(note && !form.checkValidity())note.textContent='Заполни обязательные поля и выбери хотя бы одну тематику.';
+    });
+  });
+  window.saveProfile=saveProfile;
   applyTelegramAccount();
   renderCatalogTopics();loadBloggers();loadPro();loadMyProfile();
 </script>
