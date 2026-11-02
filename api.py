@@ -90,9 +90,11 @@ async def lifespan(app: FastAPI):
     await telegram_app.shutdown()
 
 app = FastAPI(title="Creator Manager API", lifespan=lifespan)
+# GitHub Pages and Telegram Web Mini App origins; Telegram initData is still verified.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://keril3727-oss.github.io"],
+    allow_origin_regex=r"^https://(web\.telegram\.org|t\.me|telegram\.org)$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Telegram-Init-Data"],
