@@ -385,7 +385,7 @@
       const selectedCampaignTopic=document.getElementById('campaignTopicFilter')?.value||'Все';
       const filteredItems=selectedCampaignTopic==='Все'?items:items.filter(x=>nicheMatches(x.niche,selectedCampaignTopic));
       document.getElementById('campaignCount').textContent=filteredItems.length+' открытых';
-      box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
+      box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+',this)">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
   document.getElementById('campaignImage').addEventListener('change',e=>{
@@ -419,11 +419,22 @@
       await loadMyCampaigns();await loadCampaigns();
     }catch(err){notify(stage+': '+err.message);}
   }
-  async function applyCampaign(id){
+  async function applyCampaign(id, button){
+    if(button?.dataset.busy==='1')return;
+    if(button?.dataset.applied==='1'){notify('Вы уже откликнулись');return;}
     const message=prompt('Коротко расскажи, почему ты подходишь для этой рекламы:');
     if(message===null)return;
-    try{await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});notify('Отклик отправлен!');}
-    catch(err){notify(err.message);}
+    if(button){button.dataset.busy='1';button.disabled=true;button.textContent='Отправляем…';}
+    try{
+      const result=await api('/api/campaigns/'+id+'/apply',{method:'POST',body:JSON.stringify({message})});
+      const already=Boolean(result?.already_applied);
+      if(button){button.dataset.busy='0';button.dataset.applied='1';button.disabled=true;button.textContent=already?'Вы уже откликнулись':'Отклик отправлен';}
+      notify(already?'Вы уже откликнулись':'Отклик отправлен!');
+    }catch(err){
+      if(button){button.dataset.busy='0';button.disabled=false;button.textContent='Откликнуться';}
+      if(String(err.message||'').includes('23505')||String(err.message||'').includes('duplicate key')){if(button){button.dataset.applied='1';button.disabled=true;button.textContent='Вы уже откликнулись';}notify('Вы уже откликнулись');}
+      else notify(err.message||'Не удалось отправить отклик');
+    }
   }
   function renderInvoiceStatus(statusId, plan, invoice){
     const box=document.getElementById(statusId);
