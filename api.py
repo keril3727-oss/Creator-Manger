@@ -117,7 +117,7 @@ class Profile(BaseModel):
 class Campaign(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=2000)
-    niche: str = Field(min_length=1, max_length=60)
+    niche: str = Field(min_length=1, max_length=300)
     budget: float = Field(gt=0, le=100_000_000)
     currency: str = Field(default="EUR", max_length=8)
     image_url: str | None = Field(default=None, max_length=500)
