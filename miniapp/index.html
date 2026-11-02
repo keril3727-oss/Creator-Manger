@@ -51,7 +51,7 @@
     .role-card:active{border-color:var(--blue);background:#102d4d}
     @media(max-width:700px){.app{padding:14px 14px 100px}.role-switch{gap:8px}.role-card{padding:12px;gap:9px}.role-card .role-icon{width:36px;height:36px}.role-card strong{font-size:13px}.role-card small{font-size:10px}.cards{grid-template-columns:1fr}}
   
-.topic-picker{border:1px solid var(--line);background:#0b1c30;border-radius:14px;padding:12px}.topic-head{display:flex;justify-content:space-between;align-items:center;color:#a9bfd6;font-size:12px;margin-bottom:8px}.topic-search{width:100%;border:1px solid var(--line);background:#071426;color:var(--text);border-radius:10px;padding:10px;margin-bottom:9px}.topic-options{display:flex;flex-wrap:wrap;gap:7px;max-height:180px;overflow:auto}.topic-option{border:1px solid var(--line);border-radius:20px;background:#102945;color:#a9bfd6;padding:7px 10px;font-size:12px}.topic-option.active{background:#123c66;border-color:var(--blue);color:#8edaff}.topic-custom{display:none;margin-top:9px}.topic-custom.show{display:block}.topic-selected{font-size:12px;color:#8edaff;margin-top:8px;line-height:1.6}</style>
+</style>
 </head>
 <body>
   <main class="app">
@@ -90,7 +90,7 @@
       <form class="form profile-form" id="authorProfileForm" data-kind="author" onsubmit="saveProfile(event)">
         <input name="display_name" placeholder="Имя блогера / название блога" required maxlength="60">
         <input name="username" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
-        <input type="hidden" name="niche" required><div class="topic-picker" data-topic-picker="author"><div class="topic-head"><span>Тематики — выбери до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
+        <input name="niche" placeholder="Тематика блога" required maxlength="120">
         <input name="followers" type="number" min="0" placeholder="Подписчики в соцсетях" required>
         <input name="reach" type="number" min="0" placeholder="Средние просмотры публикации" required>
         <input name="ad_formats" placeholder="Форматы: интеграция, сторис, видео" required maxlength="200">
@@ -105,7 +105,7 @@
         <input name="display_name" placeholder="Название Telegram-канала" required maxlength="60">
         <input name="channel_url" placeholder="Ссылка на канал: https://t.me/..." required>
         <input name="username" placeholder="@username владельца для связи" required minlength="5" maxlength="33">
-        <input type="hidden" name="niche" required><div class="topic-picker" data-topic-picker="channel"><div class="topic-head"><span>Тематики — выбери до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
+        <input name="niche" placeholder="Тематика канала" required maxlength="120">
         <input name="followers" type="number" min="0" placeholder="Количество подписчиков" required>
         <input name="reach" type="number" min="0" placeholder="Средний охват одного поста" required>
         <input name="ad_formats" placeholder="Рекламные форматы: пост, закреп, серия постов" required maxlength="200">
@@ -161,17 +161,6 @@
     <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
     <button class="tab" onclick="showView('tariffs',this)"><b>◇</b>Тарифы</button>
   </div></nav>
-  const TOPICS=["Образование","Наука","Технологии","IT и программирование","Бизнес","Финансы","Маркетинг","Недвижимость","Авто и транспорт","Путешествия","Еда и кулинария","Здоровье","Фитнес и спорт","Красота","Мода и стиль","Lifestyle","Семья и дети","Дом и интерьер","DIY и рукоделие","Игры","Киберспорт","Кино и сериалы","Музыка","Юмор и развлечения","Новости и общество","Политика","История","Книги и литература","Искусство и дизайн","Фотография","Животные","Природа и экология","Психология","Отношения","Карьера и саморазвитие","Другое"];
-  const topicSelections={author:[],channel:[],campaign:[]};
-  function topicNormalize(v){return String(v||"").split(/[;,]/).map(x=>x.trim()).filter(Boolean);}
-  function topicPickerInit(){document.querySelectorAll("[data-topic-picker]").forEach(p=>{p.querySelector(".topic-options").innerHTML=TOPICS.map(t=>'<button type="button" class="topic-option" data-topic="'+esc(t)+'" onclick="toggleTopic(this)">'+esc(t)+'</button>').join("");syncTopicPicker(p);});}
-  function syncTopicPicker(p){const k=p.dataset.topicPicker,a=topicSelections[k]||[];p.querySelectorAll(".topic-option").forEach(b=>b.classList.toggle("active",a.includes(b.dataset.topic)));p.querySelector(".topic-count").textContent=a.length+"/5";p.querySelector(".topic-selected").textContent=a.length?a.join(" · "):"Не выбрано";p.querySelector(".topic-custom").classList.toggle("show",a.includes("Другое"));}
-  function toggleTopic(b){const p=b.closest("[data-topic-picker]"),k=p.dataset.topicPicker,t=b.dataset.topic,a=topicSelections[k]||[];if(a.includes(t))topicSelections[k]=a.filter(x=>x!==t);else if(a.length<5)topicSelections[k]=[...a,t];else{notify("Можно выбрать не больше 5 тематик");return;}syncTopicPicker(p);updateNicheValue(p);}
-  function filterTopicOptions(i){const q=i.value.trim().toLowerCase();i.closest(".topic-picker").querySelectorAll(".topic-option").forEach(b=>b.style.display=b.dataset.topic.toLowerCase().includes(q)?"":"none");}
-  function updateNicheValue(p){const k=p.dataset.topicPicker,a=topicSelections[k]||[],c=p.querySelector(".topic-custom").value.trim(),v=a.filter(x=>x!=="Другое");if(a.includes("Другое")&&c)v.push(c);if(k==="campaign")document.getElementById("campaignNiche").value=v.join(", ");else p.closest("form").elements.namedItem("niche").value=v.join(", ");}
-  document.querySelectorAll(".topic-custom").forEach(i=>i.addEventListener("input",()=>updateNicheValue(i.closest(".topic-picker"))));
-  function loadTopicValue(k,v){const raw=topicNormalize(v),standard=raw.filter(x=>TOPICS.includes(x)),custom=raw.filter(x=>!TOPICS.includes(x));topicSelections[k]=[...standard.filter(x=>x!=="Другое"),...(custom.length?["Другое"]:[])].slice(0,5);const p=document.querySelector('[data-topic-picker="'+k+'"]');if(p){p.querySelector(".topic-custom").value=custom.join(", ");syncTopicPicker(p);updateNicheValue(p);}}
-<script>
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
   // Replace this value with the public URL of the Render service.
