@@ -443,19 +443,34 @@
     }catch(e){document.querySelectorAll('.profile-note').forEach(n=>n.textContent='Не удалось загрузить профиль: '+e.message);}
   }
 
-  document.getElementById('buyProUsdt').addEventListener('click',()=>buyPro('USDT'));
-  document.getElementById('buyProTon').addEventListener('click',()=>buyPro('TON'));
-  document.getElementById('buyBusinessUsdt').addEventListener('click',()=>buyBusiness('USDT'));
-  document.getElementById('buyBusinessTon').addEventListener('click',()=>buyBusiness('TON'));
-  window.addEventListener('error',e=>{const box=document.getElementById('proStatus');if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');});
-  window.buyPro = buyPro;
-  window.buyBusiness = buyBusiness;
+  // Bind actions defensively so one missing element cannot disable the rest of the app.
+  window.addEventListener('error',e=>{
+    const box=document.getElementById('proStatus');
+    if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');
+  });
+  window.addEventListener('unhandledrejection',e=>{
+    const box=document.getElementById('proStatus');
+    if(box)box.textContent='Ошибка приложения: '+(e.reason?.message||String(e.reason||'ошибка'));
+  });
+  document.addEventListener('click',event=>{
+    const button=event.target.closest('button');
+    if(!button)return;
+    if(button.id==='buyProUsdt'){event.preventDefault();buyPro('USDT');}
+    else if(button.id==='buyProTon'){event.preventDefault();buyPro('TON');}
+    else if(button.id==='buyBusinessUsdt'){event.preventDefault();buyBusiness('USDT');}
+    else if(button.id==='buyBusinessTon'){event.preventDefault();buyBusiness('TON');}
+  });
+  window.buyPro=buyPro;
+  window.buyBusiness=buyBusiness;
   document.querySelectorAll('.profile-form').forEach(form=>{
-    form.addEventListener('submit',event=>saveProfile(event));
+    form.addEventListener('submit',event=>{event.preventDefault();saveProfile(event);});
     const submit=form.querySelector('button[type="submit"]');
     if(submit)submit.addEventListener('click',()=>{
       const note=form.querySelector('.profile-note');
-      if(note && !form.checkValidity())note.textContent='Заполни обязательные поля и выбери хотя бы одну тематику.';
+      if(note && !form.checkValidity()){
+        note.textContent='Заполни обязательные поля.';
+        form.reportValidity();
+      }
     });
   });
   window.saveProfile=saveProfile;
