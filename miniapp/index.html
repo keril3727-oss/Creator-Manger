@@ -165,6 +165,7 @@
   let selectedNiche="Все", bloggers=[], savedProfilePhoto=null, catalogKind="author";
   const NICHE_TOPICS=["Образование","Наука","Технологии","IT и программирование","Бизнес","Финансы","Маркетинг","Недвижимость","Авто и транспорт","Путешествия","Спорт и фитнес","Инвестиции","Автомобили и мото","Знакомства и отношения","Еда и рестораны","Другое"];
   const topicSelections=new Map();
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   function parseTopics(value){const parts=String(value||'').split(/[,;|]/).map(v=>v.trim()).filter(Boolean);return parts.map(v=>v.startsWith('Другое:')?'Другое':v).filter((v,i,a)=>NICHE_TOPICS.includes(v)&&a.indexOf(v)===i).slice(0,5)}
   function topicValues(picker){const selected=topicSelections.get(picker.dataset.topicPicker)||[],custom=picker.querySelector('.topic-custom').value.trim();return selected.map(t=>t==='Другое'&&custom?'Другое: '+custom:t)}
   function writeTopicValue(picker){const value=topicValues(picker).join(', '),key=picker.dataset.topicPicker;if(key==='campaign'){document.getElementById('campaignNiche').value=value;}else{const hidden=picker.parentElement.querySelector('input[name="niche"]');if(hidden)hidden.value=value;}picker.querySelector('.topic-selected').textContent=value||'Не выбрано';}
@@ -203,7 +204,6 @@
       }
     }
   }
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   function errorText(value, fallback="Произошла ошибка") {
     if (typeof value === "string" && value.trim()) return value;
     if (value && typeof value === "object") return value.message || value.detail || value.error || JSON.stringify(value);
