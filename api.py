@@ -294,9 +294,6 @@ async def delete_campaign(campaign_id: int, telegram_id: int = __import__("fasta
 
 @app.post("/api/campaigns/{campaign_id}/apply")
 async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
-    # Telegram initData is verified by user_id; use that Telegram ID as blogger_id.
-    # Check first for friendly duplicate handling, while retaining the DB unique key
-    # as the concurrency-safe final guard.
     existing = await db_request("GET", "campaign_applications", params={
         "select": "id,campaign_id,blogger_id",
         "campaign_id": f"eq.{campaign_id}",
@@ -306,16 +303,52 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
     if existing:
         return {"ok": True, "already_applied": True, "message": "Вы уже откликнулись"}
 
+    campaigns = await db_request("GET", "campaigns", params={
+        "select": "id,advertiser_id,title,budget,currency",
+        "id": f"eq.{campaign_id}", "limit": "1",
+    })
+    if not campaigns:
+        raise HTTPException(404, "Объявление не найдено")
+    campaign = campaigns[0]
+    if int(campaign.get("advertiser_id") or 0) == int(telegram_id):
+        raise HTTPException(400, "Нельзя откликнуться на своё объявление")
+
+    blogger_rows = await db_request("GET", "bloggers", params={
+        "select": "username,display_name,followers",
+        "telegram_id": f"eq.{telegram_id}", "limit": "1",
+    })
+    blogger = blogger_rows[0] if blogger_rows else {}
+    username = str(blogger.get("username") or "").strip().lstrip("@")
+    display_name = str(blogger.get("display_name") or "Блогер").strip()
     payload = {"campaign_id": campaign_id, "blogger_id": telegram_id, "message": request.message}
     try:
-        result = await db_request("POST", "campaign_applications", payload=payload)
-        return {"ok": True, "already_applied": False, "application": result}
+        await db_request("POST", "campaign_applications", payload=payload)
     except HTTPException as exc:
-        # Two concurrent taps can pass the pre-check. Treat PostgreSQL 23505 as
-        # an idempotent duplicate; never expose raw DB diagnostics to the client.
         if exc.status_code == 502 and "23505" in str(exc.detail):
             return {"ok": True, "already_applied": True, "message": "Вы уже откликнулись"}
         raise
+
+    sent = False
+    if BOT_TOKEN:
+        msg = (
+            "📩 Новый отклик на ваше объявление\n\n"
+            f"📣 {campaign.get('title') or 'Объявление'}\n"
+            f"Бюджет: {campaign.get('budget', '')} {campaign.get('currency', '')}\n\n"
+            f"Блогер: {display_name} (@{username or 'нет username'})\n"
+            f"Подписчики: {blogger.get('followers', 'не указано')}\n"
+            f"Сообщение: {request.message or 'Без сообщения'}\n"
+            + (f"Профиль: https://t.me/{username}" if username else f"Telegram ID: {telegram_id}")
+        )
+        try:
+            async with httpx.AsyncClient(timeout=12) as client:
+                resp = await client.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    json={"chat_id": int(campaign["advertiser_id"]), "text": msg},
+                )
+            sent = resp.is_success and bool(resp.json().get("ok"))
+        except Exception:
+            sent = False
+    return {"ok": True, "already_applied": False, "notification_sent": sent}
 
 
 class ProInvoiceRequest(BaseModel):
