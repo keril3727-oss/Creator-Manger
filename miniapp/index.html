@@ -81,7 +81,7 @@
         <button id="channelFormTab" style="flex:1" type="button" onclick="switchProfileForm('channel')">У меня TG-канал</button>
       </div>
       <p class="note">Выбери тип площадки — для каждого свой набор полей. Контакт для связи берётся из твоего Telegram.</p>
-      <form class="form profile-form" id="authorProfileForm" data-kind="author" >
+      <form class="form profile-form" id="authorProfileForm" data-kind="author" onsubmit="saveProfile(event); return false;">
         <input name="display_name" placeholder="Имя блогера / название блога" required maxlength="60">
         <input name="username" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
         <input name="niche" type="hidden" required><div class="topic-picker" data-topic-picker="authorProfileForm"><div class="topic-head"><span>Тематики блога — до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Если выбрано «Другое», впиши нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
@@ -95,7 +95,7 @@
         <button class="primary" type="submit">Сохранить профиль блогера</button>
         <p class="note profile-note">Профиль блогера появится в каталоге.</p>
       </form>
-      <form class="form profile-form" id="channelProfileForm" data-kind="channel" style="display:none">
+      <form class="form profile-form" id="channelProfileForm" data-kind="channel" onsubmit="saveProfile(event); return false;" style="display:none">
         <input name="display_name" placeholder="Название Telegram-канала" required maxlength="60">
         <input name="channel_url" placeholder="Ссылка на канал: https://t.me/..." required>
         <input name="username" placeholder="@username владельца для связи" required minlength="5" maxlength="33">
