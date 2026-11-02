@@ -294,8 +294,28 @@ async def delete_campaign(campaign_id: int, telegram_id: int = __import__("fasta
 
 @app.post("/api/campaigns/{campaign_id}/apply")
 async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
+    # Telegram initData is verified by user_id; use that Telegram ID as blogger_id.
+    # Check first for friendly duplicate handling, while retaining the DB unique key
+    # as the concurrency-safe final guard.
+    existing = await db_request("GET", "campaign_applications", params={
+        "select": "id,campaign_id,blogger_id",
+        "campaign_id": f"eq.{campaign_id}",
+        "blogger_id": f"eq.{telegram_id}",
+        "limit": "1",
+    })
+    if existing:
+        return {"ok": True, "already_applied": True, "message": "Вы уже откликнулись"}
+
     payload = {"campaign_id": campaign_id, "blogger_id": telegram_id, "message": request.message}
-    return await db_request("POST", "campaign_applications", payload=payload)
+    try:
+        result = await db_request("POST", "campaign_applications", payload=payload)
+        return {"ok": True, "already_applied": False, "application": result}
+    except HTTPException as exc:
+        # Two concurrent taps can pass the pre-check. Treat PostgreSQL 23505 as
+        # an idempotent duplicate; never expose raw DB diagnostics to the client.
+        if exc.status_code == 502 and "23505" in str(exc.detail):
+            return {"ok": True, "already_applied": True, "message": "Вы уже откликнулись"}
+        raise
 
 
 class ProInvoiceRequest(BaseModel):
