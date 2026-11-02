@@ -120,7 +120,7 @@
       <div class="section-head"><h2>Опубликовать объявление</h2></div>
       <form class="form" onsubmit="createCampaign(event)">
         <input id="campaignTitle" placeholder="Название кампании" required maxlength="100">
-        <input id="campaignNiche" placeholder="Выбранные тематики" required maxlength="500"><div class="topic-picker" data-topic-picker="campaign"><div class="topic-head"><span>Тематики объявления — до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
+        <input id="campaignNiche" type="hidden" required><div class="topic-picker" data-topic-picker="campaign"><div class="topic-head"><span>Тематики объявления — до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
         <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
         <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
         <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea><input id="campaignContact" placeholder="@username рекламодателя для связи" required minlength="5" maxlength="33">
