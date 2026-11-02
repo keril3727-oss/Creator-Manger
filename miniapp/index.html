@@ -398,20 +398,26 @@
     e.preventDefault();
     const file=document.getElementById('campaignImage').files[0];
     let image_url=null;
+    let stage='Публикация';
     try{
       if(file){
-        const upload=await fetch(API_BASE+'/api/upload-image',{method:'POST',headers:{'Content-Type':file.type,'X-Telegram-Init-Data':initData},body:file});
+        stage='Загрузка изображения';
+        let upload;
+        try{upload=await fetch(API_BASE+'/api/upload-image',{method:'POST',headers:{'Content-Type':file.type,'X-Telegram-Init-Data':initData},body:file});}
+        catch(networkError){throw new Error('Не удалось связаться с сервером на этапе загрузки фото. Проверь Render/CORS.');}
         const result=await upload.json().catch(()=>({}));
-        if(!upload.ok)throw new Error(errorText(result.detail||result.error||result.message,'Не удалось загрузить изображение'));
+        if(!upload.ok)throw new Error(errorText(result.detail||result.error||result.message,'Ошибка загрузки изображения ('+upload.status+')'));
         image_url=result.image_url;
       }
+      stage='Создание объявления';
       const wasEditing=Boolean(editingCampaignId);
       writeTopicValue(document.querySelector('[data-topic-picker="campaign"]'));const payload={title:document.getElementById('campaignTitle').value.trim(),niche:document.getElementById('campaignNiche').value.trim(),budget:Number(document.getElementById('campaignBudget').value),currency:document.getElementById('campaignCurrency').value,description:document.getElementById('campaignDescription').value.trim(),image_url:image_url||editingCampaignImage,contact_username:document.getElementById('campaignContact').value.trim().replace(/^@/,'')};
-      await api(editingCampaignId?('/api/campaigns/'+editingCampaignId):'/api/campaigns',{method:wasEditing?'PATCH':'POST',body:JSON.stringify(payload)});
+      try{await api(editingCampaignId?('/api/campaigns/'+editingCampaignId):'/api/campaigns',{method:wasEditing?'PATCH':'POST',body:JSON.stringify(payload)});}
+      catch(networkError){if(networkError.message==='Failed to fetch')throw new Error('Не удалось связаться с API при создании объявления. Проверь доступность Render и CORS.');throw networkError;}
       cancelCampaignEdit();
       notify(wasEditing?'Изменения сохранены!':'Кампания опубликована!');
       await loadMyCampaigns();await loadCampaigns();
-    }catch(err){notify(err.message);}
+    }catch(err){notify(stage+': '+err.message);}
   }
   async function applyCampaign(id){
     const message=prompt('Коротко расскажи, почему ты подходишь для этой рекламы:');
