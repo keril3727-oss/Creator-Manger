@@ -50,7 +50,8 @@
     .role-card strong{display:block;font-size:15px}.role-card small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
     .role-card:active{border-color:var(--blue);background:#102d4d}
     @media(max-width:700px){.app{padding:14px 14px 100px}.role-switch{gap:8px}.role-card{padding:12px;gap:9px}.role-card .role-icon{width:36px;height:36px}.role-card strong{font-size:13px}.role-card small{font-size:10px}.cards{grid-template-columns:1fr}}
-  </style>
+  
+.topic-picker{border:1px solid var(--line);background:#0b1c30;border-radius:14px;padding:12px}.topic-head{display:flex;justify-content:space-between;align-items:center;color:#a9bfd6;font-size:12px;margin-bottom:8px}.topic-search{width:100%;border:1px solid var(--line);background:#071426;color:var(--text);border-radius:10px;padding:10px;margin-bottom:9px}.topic-options{display:flex;flex-wrap:wrap;gap:7px;max-height:180px;overflow:auto}.topic-option{border:1px solid var(--line);border-radius:20px;background:#102945;color:#a9bfd6;padding:7px 10px;font-size:12px}.topic-option.active{background:#123c66;border-color:var(--blue);color:#8edaff}.topic-custom{display:none;margin-top:9px}.topic-custom.show{display:block}.topic-selected{font-size:12px;color:#8edaff;margin-top:8px;line-height:1.6}</style>
 </head>
 <body>
   <main class="app">
@@ -89,7 +90,7 @@
       <form class="form profile-form" id="authorProfileForm" data-kind="author" onsubmit="saveProfile(event)">
         <input name="display_name" placeholder="Имя блогера / название блога" required maxlength="60">
         <input name="username" placeholder="@username в Telegram для связи" required minlength="5" maxlength="33">
-        <input name="niche" placeholder="Тематика блога (например, Lifestyle)" required maxlength="50">
+        <input type="hidden" name="niche" required><div class="topic-picker" data-topic-picker="author"><div class="topic-head"><span>Тематики — выбери до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
         <input name="followers" type="number" min="0" placeholder="Подписчики в соцсетях" required>
         <input name="reach" type="number" min="0" placeholder="Средние просмотры публикации" required>
         <input name="ad_formats" placeholder="Форматы: интеграция, сторис, видео" required maxlength="200">
@@ -104,7 +105,7 @@
         <input name="display_name" placeholder="Название Telegram-канала" required maxlength="60">
         <input name="channel_url" placeholder="Ссылка на канал: https://t.me/..." required>
         <input name="username" placeholder="@username владельца для связи" required minlength="5" maxlength="33">
-        <input name="niche" placeholder="Тематика канала" required maxlength="50">
+        <input type="hidden" name="niche" required><div class="topic-picker" data-topic-picker="channel"><div class="topic-head"><span>Тематики — выбери до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
         <input name="followers" type="number" min="0" placeholder="Количество подписчиков" required>
         <input name="reach" type="number" min="0" placeholder="Средний охват одного поста" required>
         <input name="ad_formats" placeholder="Рекламные форматы: пост, закреп, серия постов" required maxlength="200">
@@ -120,12 +121,12 @@
     <section id="campaigns" class="view">
       <div class="section-head"><h2>Мои объявления</h2><span class="count">Управление</span></div>
       <div id="myCampaignList" class="cards"><div class="empty">Загружаю твои объявления…</div></div>
-      <div class="section-head"><h2>Каталог объявлений компаний</h2><span class="count" id="campaignCount">Открытые</span></div>
+      <div class="section-head"><h2>Каталог объявлений компаний</h2><span class="count" id="campaignCount">Открытые</span></div><select id="campaignTopicFilter" class="search" onchange="loadCampaigns()"><option value="Все">Все тематики</option><option value="Образование">Образование</option><option value="Наука">Наука</option><option value="Технологии">Технологии</option><option value="IT и программирование">IT и программирование</option><option value="Бизнес">Бизнес</option><option value="Финансы">Финансы</option><option value="Маркетинг">Маркетинг</option><option value="Недвижимость">Недвижимость</option><option value="Авто и транспорт">Авто и транспорт</option><option value="Путешествия">Путешествия</option><option value="Еда и кулинария">Еда и кулинария</option><option value="Здоровье">Здоровье</option><option value="Фитнес и спорт">Фитнес и спорт</option><option value="Красота">Красота</option><option value="Мода и стиль">Мода и стиль</option><option value="Lifestyle">Lifestyle</option><option value="Семья и дети">Семья и дети</option><option value="Дом и интерьер">Дом и интерьер</option><option value="DIY и рукоделие">DIY и рукоделие</option><option value="Игры">Игры</option><option value="Киберспорт">Киберспорт</option><option value="Кино и сериалы">Кино и сериалы</option><option value="Музыка">Музыка</option><option value="Юмор и развлечения">Юмор и развлечения</option><option value="Новости и общество">Новости и общество</option><option value="Политика">Политика</option><option value="История">История</option><option value="Книги и литература">Книги и литература</option><option value="Искусство и дизайн">Искусство и дизайн</option><option value="Фотография">Фотография</option><option value="Животные">Животные</option><option value="Природа и экология">Природа и экология</option><option value="Психология">Психология</option><option value="Отношения">Отношения</option><option value="Карьера и саморазвитие">Карьера и саморазвитие</option><option value="Другое">Другое</option></select>
       <div id="campaignList" class="cards"><div class="empty">Загружаю кампании…</div></div>
       <div class="section-head"><h2>Опубликовать объявление</h2></div>
       <form class="form" onsubmit="createCampaign(event)">
         <input id="campaignTitle" placeholder="Название кампании" required maxlength="100">
-        <input id="campaignNiche" placeholder="Тематика (например, Lifestyle)" required maxlength="60">
+        <input id="campaignNiche" placeholder="Выбранные тематики" required maxlength="500"><div class="topic-picker" data-topic-picker="campaign"><div class="topic-head"><span>Тематики объявления — до 5</span><span class="topic-count">0/5</span></div><input class="topic-search" type="search" placeholder="Поиск тематик…" oninput="filterTopicOptions(this)"><div class="topic-options"></div><input class="topic-custom" type="text" placeholder="Впиши свою нишу" maxlength="50"><div class="topic-selected">Не выбрано</div></div>
         <input id="campaignBudget" type="number" min="1" step="0.01" placeholder="Бюджет" required>
         <select id="campaignCurrency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
         <textarea id="campaignDescription" placeholder="Что нужно рекламировать и какие условия?"></textarea><input id="campaignContact" placeholder="@username рекламодателя для связи" required minlength="5" maxlength="33">
@@ -160,6 +161,16 @@
     <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
     <button class="tab" onclick="showView('tariffs',this)"><b>◇</b>Тарифы</button>
   </div></nav>
+  const TOPICS=["Образование","Наука","Технологии","IT и программирование","Бизнес","Финансы","Маркетинг","Недвижимость","Авто и транспорт","Путешествия","Еда и кулинария","Здоровье","Фитнес и спорт","Красота","Мода и стиль","Lifestyle","Семья и дети","Дом и интерьер","DIY и рукоделие","Игры","Киберспорт","Кино и сериалы","Музыка","Юмор и развлечения","Новости и общество","Политика","История","Книги и литература","Искусство и дизайн","Фотография","Животные","Природа и экология","Психология","Отношения","Карьера и саморазвитие","Другое"];
+  const topicSelections={author:[],channel:[],campaign:[]};
+  function topicNormalize(v){return String(v||"").split(/[;,]/).map(x=>x.trim()).filter(Boolean);}
+  function topicPickerInit(){document.querySelectorAll("[data-topic-picker]").forEach(p=>{p.querySelector(".topic-options").innerHTML=TOPICS.map(t=>'<button type="button" class="topic-option" data-topic="'+esc(t)+'" onclick="toggleTopic(this)">'+esc(t)+'</button>').join("");syncTopicPicker(p);});}
+  function syncTopicPicker(p){const k=p.dataset.topicPicker,a=topicSelections[k]||[];p.querySelectorAll(".topic-option").forEach(b=>b.classList.toggle("active",a.includes(b.dataset.topic)));p.querySelector(".topic-count").textContent=a.length+"/5";p.querySelector(".topic-selected").textContent=a.length?a.join(" · "):"Не выбрано";p.querySelector(".topic-custom").classList.toggle("show",a.includes("Другое"));}
+  function toggleTopic(b){const p=b.closest("[data-topic-picker]"),k=p.dataset.topicPicker,t=b.dataset.topic,a=topicSelections[k]||[];if(a.includes(t))topicSelections[k]=a.filter(x=>x!==t);else if(a.length<5)topicSelections[k]=[...a,t];else{notify("Можно выбрать не больше 5 тематик");return;}syncTopicPicker(p);updateNicheValue(p);}
+  function filterTopicOptions(i){const q=i.value.trim().toLowerCase();i.closest(".topic-picker").querySelectorAll(".topic-option").forEach(b=>b.style.display=b.dataset.topic.toLowerCase().includes(q)?"":"none");}
+  function updateNicheValue(p){const k=p.dataset.topicPicker,a=topicSelections[k]||[],c=p.querySelector(".topic-custom").value.trim(),v=a.filter(x=>x!=="Другое");if(a.includes("Другое")&&c)v.push(c);if(k==="campaign")document.getElementById("campaignNiche").value=v.join(", ");else p.closest("form").elements.namedItem("niche").value=v.join(", ");}
+  document.querySelectorAll(".topic-custom").forEach(i=>i.addEventListener("input",()=>updateNicheValue(i.closest(".topic-picker"))));
+  function loadTopicValue(k,v){const raw=topicNormalize(v),standard=raw.filter(x=>TOPICS.includes(x)),custom=raw.filter(x=>!TOPICS.includes(x));topicSelections[k]=[...standard.filter(x=>x!=="Другое"),...(custom.length?["Другое"]:[])].slice(0,5);const p=document.querySelector('[data-topic-picker="'+k+'"]');if(p){p.querySelector(".topic-custom").value=custom.join(", ");syncTopicPicker(p);updateNicheValue(p);}}
 <script>
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
@@ -246,7 +257,7 @@
   }
   function renderCards(){
     const q=(document.getElementById('search').value||'').toLowerCase();
-    const list=bloggers.filter(x=>(selectedNiche==="Все"||x.niche===selectedNiche)&&
+    const list=bloggers.filter(x=>(selectedNiche==="Все"||topicNormalize(x.niche).includes(selectedNiche))&&
       (x.display_name+" "+x.niche+" "+(x.description||"")+" "+(x.ad_formats||"")).toLowerCase().includes(q));
     document.getElementById('count').textContent=list.length+(catalogKind==="author"?" авторов":" каналов");
     document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
@@ -285,7 +296,7 @@
       if(file)photo_url=await uploadImage(file);
       const channel_url=kind==='channel'?val('channel_url'):null;
       if(kind==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
-      const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
+      const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),topics:topicNormalize(val('niche')),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
       savedProfilePhoto=photo_url;note.textContent='Профиль сохранён и опубликован в каталоге.';notify('Профиль сохранён!');await loadBloggers();
     }catch(err){note.textContent='Не удалось сохранить: '+err.message;notify(err.message);}
@@ -338,8 +349,10 @@
     loadMyCampaigns();
     try{
       const items=await api('/api/campaigns');
-      document.getElementById('campaignCount').textContent=items.length+' открытых';
-      box.innerHTML=items.length?items.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
+      const selectedCampaignTopic=document.getElementById('campaignTopicFilter')?.value||'Все';
+      const filteredItems=selectedCampaignTopic==='Все'?items:items.filter(x=>topicNormalize(x.niche).includes(selectedCampaignTopic));
+      document.getElementById('campaignCount').textContent=filteredItems.length+' открытых';
+      box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+')">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
   document.getElementById('campaignImage').addEventListener('change',e=>{
@@ -426,6 +439,7 @@
       for(const [key,value] of Object.entries({display_name:p.display_name,username:p.username?'@'+p.username:'',channel_url:p.channel_url||'',niche:p.niche,followers:p.followers,reach:p.reach,ad_formats:p.ad_formats,price:p.price,description:p.description})){
         const field=form.elements.namedItem(key);if(field)field.value=value??'';
       }
+      loadTopicValue(kind,p.niche||'');
       savedProfilePhoto=p.photo_url||null;
       if(savedProfilePhoto){const preview=form.querySelector('.profile-preview');preview.src=savedProfilePhoto;preview.style.display='block';}
       form.querySelector('.profile-note').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
@@ -439,6 +453,7 @@
   window.addEventListener('error',e=>{const box=document.getElementById('proStatus');if(box)box.textContent='Ошибка приложения: '+(e.message||'неизвестная ошибка');});
   window.buyPro = buyPro;
   window.buyBusiness = buyBusiness;
+  topicPickerInit();
   applyTelegramAccount();
   loadBloggers();loadPro();loadMyProfile();
 </script>
