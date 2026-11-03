@@ -327,7 +327,7 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
         return {"ok": True, "already_applied": True, "message": "Вы уже откликнулись"}
 
     campaigns = await db_request("GET", "campaigns", params={
-        "select": "id,advertiser_id,title,budget,currency",
+        "select": "id,advertiser_id,title,budget,currency,contact_username",
         "id": f"eq.{campaign_id}", "limit": "1",
     })
     if not campaigns:
@@ -380,6 +380,8 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
         "already_applied": False,
         "notification_sent": sent,
         "notification_error": None if sent else delivery_error,
+        "advertiser_username": str(campaign.get("contact_username") or "").strip().lstrip("@"),
+        "advertiser_id": int(campaign.get("advertiser_id") or 0),
     }
 
 
