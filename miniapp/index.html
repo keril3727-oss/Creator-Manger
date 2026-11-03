@@ -435,6 +435,12 @@
       const already=Boolean(result?.already_applied);
       if(button){button.dataset.busy='0';button.dataset.applied='1';button.disabled=true;button.textContent=already?'Вы уже откликнулись':'Отклик отправлен';}
       notify(already?'Вы уже откликнулись':'Отклик отправлен!');
+      if(!already){
+        const contact=String(result?.advertiser_username||'').replace(/^@/,'');
+        if(contact){const chatUrl='https://t.me/'+contact;if(tg)tg.openTelegramLink(chatUrl);else window.open(chatUrl,'_blank');}
+        else if(result?.advertiser_id){const chatUrl='tg://user?id='+encodeURIComponent(result.advertiser_id);if(tg)tg.openLink(chatUrl);else window.location.href=chatUrl;}
+        else notify('Отклик отправлен, но контакт рекламодателя не указан.');
+      }
     }catch(err){
       if(button){button.dataset.busy='0';button.disabled=false;button.textContent='Откликнуться';}
       if(String(err.message||'').includes('23505')||String(err.message||'').includes('duplicate key')){if(button){button.dataset.applied='1';button.disabled=true;button.textContent='Вы уже откликнулись';}notify('Вы уже откликнулись');}
