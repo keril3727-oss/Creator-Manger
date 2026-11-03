@@ -135,14 +135,14 @@
       <p class="note">Free: до 70 € за рекламу. Pro и Business: без лимита цены.</p>
     </section>
     <section id="buyAds" class="view">
-      <div class="section-head"><h2>Купить рекламу</h2><span class="count" id="campaignCount">Объявления</span></div>
+      <div class="section-head"><h2>Найти рекламу</h2><span class="count" id="campaignCount">Объявления</span></div>
       <p class="note">Выбирай предложение компании, изучай бюджет и требования, затем отправляй отклик. Компания увидит заявку по своему объявлению.</p>
       <select id="campaignTopicFilter" class="search" onchange="loadCampaigns()"><option value="Все">Все тематики</option><option value="Образование">Образование</option><option value="Наука">Наука</option><option value="Технологии">Технологии</option><option value="IT и программирование">IT и программирование</option><option value="Бизнес">Бизнес</option><option value="Финансы">Финансы</option><option value="Маркетинг">Маркетинг</option><option value="Недвижимость">Недвижимость</option><option value="Авто и транспорт">Авто и транспорт</option><option value="Путешествия">Путешествия</option><option value="Спорт и фитнес">Спорт и фитнес</option><option value="Инвестиции">Инвестиции</option><option value="Автомобили и мото">Автомобили и мото</option><option value="Знакомства и отношения">Знакомства и отношения</option><option value="Еда и рестораны">Еда и рестораны</option><option value="Другое">Другое</option></select>
       <div id="campaignList" class="cards"><div class="empty">Загружаю объявления…</div></div>
     </section>
     <section id="buyCampaign" class="view">
       <div class="section-head"><h2>Закупить рекламу</h2><span class="count">Для компаний</span></div>
-      <p class="note">Создай рекламное объявление: опиши продукт, бюджет и требования к блогеру. После публикации оно появится в «Купить рекламу».</p>
+      <p class="note">Создай рекламное объявление: опиши продукт, бюджет и требования к блогеру. После публикации оно появится в «Найти рекламу».</p>
       <div class="section-head"><h3>Мои объявления</h3><span class="count">Управление</span></div>
       <div id="myCampaignList" class="cards"><div class="empty">Загружаю твои объявления…</div></div>
       <div class="section-head"><h3>Новое объявление</h3></div>
@@ -180,7 +180,7 @@
   <nav class="tabs"><div class="tabs-inner">
     <button class="tab active" onclick="showView('catalog',this)"><b>⌕</b>Каталог</button>
     <button class="tab" onclick="showView('profile',this)"><b>＋</b>Профиль</button>
-    <button class="tab" onclick="showView('buyAds',this)"><b>⌕</b>Купить рекламу</button>
+    <button class="tab" onclick="showView('buyAds',this)"><b>⌕</b>Найти рекламу</button>
     <button class="tab" onclick="showView('buyCampaign',this)"><b>＋</b>Закупить рекламу</button>
     <button class="tab" onclick="showView('requests',this)"><b>▤</b>Заявки</button>
     <button class="tab" onclick="showView('tariffs',this)"><b>◇</b>Тарифы</button>
@@ -289,7 +289,7 @@
     document.getElementById('count').textContent=list.length+(catalogKind==="author"?" авторов":" каналов");
     document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
   }
-  function setCatalogKind(kind){catalogKind=kind;document.getElementById('authorsTab').classList.toggle('active',kind==='author');document.getElementById('channelsTab').classList.toggle('active',kind==='channel');document.getElementById('buyActionTitle').textContent=kind==='author'?'Заказать рекламу':'Купить рекламу';document.getElementById('buyActionSub').textContent=kind==='author'?'Найти блогера для рекламы':'Найти TG-канал для размещения';document.getElementById('sellActionTitle').textContent=kind==='author'?'Выставить рекламу':'Продать рекламу';document.getElementById('sellActionSub').textContent=kind==='author'?'Разместить предложение автора':'Добавить свой TG-канал';loadBloggers();}
+  function setCatalogKind(kind){catalogKind=kind;document.getElementById('authorsTab').classList.toggle('active',kind==='author');document.getElementById('channelsTab').classList.toggle('active',kind==='channel');document.getElementById('buyActionTitle').textContent=kind==='author'?'Заказать рекламу':'Найти рекламу';document.getElementById('buyActionSub').textContent=kind==='author'?'Найти блогера для рекламы':'Найти TG-канал для размещения';document.getElementById('sellActionTitle').textContent=kind==='author'?'Выставить рекламу':'Продать рекламу';document.getElementById('sellActionSub').textContent=kind==='author'?'Разместить предложение автора':'Добавить свой TG-канал';loadBloggers();}
   function switchProfileForm(kind){
     document.getElementById('authorProfileForm').style.display=kind==='author'?'grid':'none';
     document.getElementById('channelProfileForm').style.display=kind==='channel'?'grid':'none';
