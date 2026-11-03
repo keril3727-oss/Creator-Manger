@@ -329,6 +329,7 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
         raise
 
     sent = False
+    delivery_error = "На сервере не настроен BOT_TOKEN"
     if BOT_TOKEN:
         msg = (
             "📩 Новый отклик на ваше объявление\n\n"
@@ -345,10 +346,18 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
                     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
                     json={"chat_id": int(campaign["advertiser_id"]), "text": msg},
                 )
-            sent = resp.is_success and bool(resp.json().get("ok"))
-        except Exception:
-            sent = False
-    return {"ok": True, "already_applied": False, "notification_sent": sent}
+            result = resp.json()
+            sent = resp.is_success and bool(result.get("ok"))
+            if not sent:
+                delivery_error = str(result.get("description") or f"Telegram HTTP {resp.status_code}")
+        except Exception as exc:
+            delivery_error = str(exc)[:300] or "Не удалось связаться с Telegram"
+    return {
+        "ok": True,
+        "already_applied": False,
+        "notification_sent": sent,
+        "notification_error": None if sent else delivery_error,
+    }
 
 
 class ProInvoiceRequest(BaseModel):
