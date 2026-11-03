@@ -311,16 +311,19 @@
     if(!upload.ok)throw new Error(errorText(result.detail||result.error||result.message,'Не удалось загрузить фото'));
     return result.image_url;
   }
-  function contactBlogger(username){
+  function contactBlogger(username, telegramId){
     const clean=String(username||'').trim().replace(/^@/,'');
-    if(!clean){notify('У блогера не указан Telegram username');return;}
-    const url='https://t.me/'+encodeURIComponent(clean);
-    try{
-      if(tg&&typeof tg.openTelegramLink==='function'){tg.openTelegramLink(url);return;}
-      const win=window.open(url,'_blank');
-      if(!win)window.location.href=url;
-    }catch(e){window.location.href=url;}
+    if(clean){
+      const url='https://t.me/'+encodeURIComponent(clean);
+      try{
+        if(tg&&typeof tg.openTelegramLink==='function'){tg.openTelegramLink(url);return;}
+        window.location.href=url;
+      }catch(e){window.location.href=url;}
+      return;
+    }
+    notify(telegramId ? 'У блогера есть только Telegram ID. Попроси его указать @username в профиле — тогда чат откроется.' : 'У блогера не указан Telegram username');
   }
+  window.contactBlogger=contactBlogger;
   let profileSaving=false;
   async function saveProfile(e){
     e.preventDefault();if(profileSaving)return;
