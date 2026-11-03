@@ -311,7 +311,16 @@
     if(!upload.ok)throw new Error(errorText(result.detail||result.error||result.message,'Не удалось загрузить фото'));
     return result.image_url;
   }
-  function contactBlogger(username){if(!username){notify('Не указан Telegram username');return;}const url='https://t.me/'+username;if(tg)tg.openTelegramLink(url);else window.open(url,'_blank');}
+  function contactBlogger(username){
+    const clean=String(username||'').trim().replace(/^@/,'');
+    if(!clean){notify('У блогера не указан Telegram username');return;}
+    const url='https://t.me/'+encodeURIComponent(clean);
+    try{
+      if(tg&&typeof tg.openTelegramLink==='function'){tg.openTelegramLink(url);return;}
+      const win=window.open(url,'_blank');
+      if(!win)window.location.href=url;
+    }catch(e){window.location.href=url;}
+  }
   let profileSaving=false;
   async function saveProfile(e){
     e.preventDefault();if(profileSaving)return;
