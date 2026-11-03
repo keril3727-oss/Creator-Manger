@@ -235,6 +235,29 @@ async def my_campaigns(telegram_id: int = __import__("fastapi").Depends(user_id)
         "advertiser_id": f"eq.{telegram_id}", "order": "created_at.desc",
     })
 
+@app.get("/api/campaigns/mine/applications")
+async def my_campaign_applications(telegram_id: int = __import__("fastapi").Depends(user_id)):
+    owned = await db_request("GET", "campaigns", params={
+        "select": "id,title", "advertiser_id": f"eq.{telegram_id}",
+    })
+    if not owned:
+        return []
+    campaign_ids = [int(item["id"]) for item in owned]
+    applications = await db_request("GET", "campaign_applications", params={
+        "select": "id,campaign_id,blogger_id,message,created_at",
+        "campaign_id": f"in.({','.join(map(str, campaign_ids))})",
+        "order": "created_at.desc",
+    })
+    for application in applications:
+        bloggers = await db_request("GET", "bloggers", params={
+            "select": "username,display_name,followers",
+            "telegram_id": f"eq.{application['blogger_id']}", "limit": "1",
+        })
+        blogger = bloggers[0] if bloggers else {}
+        application["blogger"] = blogger
+        application["campaign_title"] = next((x["title"] for x in owned if int(x["id"]) == int(application["campaign_id"])), "Объявление")
+    return applications
+
 @app.post("/api/campaigns")
 async def create_campaign(campaign: Campaign, telegram_id: int = __import__("fastapi").Depends(user_id), init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     admin_business = is_business_admin(init_data)
