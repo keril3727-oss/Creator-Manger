@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import os
 import re
 import time
@@ -13,6 +14,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from bot import build_application
+
+# Make startup and Telegram polling failures visible in Render logs.
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
+logger = logging.getLogger("creator_manager")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
@@ -77,24 +82,35 @@ async def db_request(method: str, table: str, *, params=None, payload=None, pref
         raise HTTPException(502, f"Ошибка базы данных ({response.status_code}): {response.text[:300]}")
     return response.json() if response.content else []
 
+async def telegram_error_handler(update, context):
+    logger.error("Telegram handler failed", exc_info=context.error)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     telegram_app = build_application()
+    telegram_app.add_error_handler(telegram_error_handler)
     await telegram_app.initialize()
+    # Start polling before the update-processing loop, as recommended by PTB.
+    await telegram_app.updater.start_polling(drop_pending_updates=False)
     await telegram_app.start()
-    await telegram_app.updater.start_polling()
     app.state.telegram_app = telegram_app
-    yield
-    await telegram_app.updater.stop()
-    await telegram_app.stop()
-    await telegram_app.shutdown()
+    logger.info("Telegram bot polling started")
+    try:
+        yield
+    finally:
+        logger.info("Stopping Telegram bot polling")
+        if telegram_app.updater and telegram_app.updater.running:
+            await telegram_app.updater.stop()
+        if telegram_app.running:
+            await telegram_app.stop()
+        await telegram_app.shutdown()
 
 app = FastAPI(title="Creator Manager API", lifespan=lifespan)
 # GitHub Pages and Telegram Web Mini App origins; Telegram initData is still verified.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://keril3727-oss.github.io"],
-    allow_origin_regex=r"^https://(web\.telegram\.org|t\.me|telegram\.org)$",
+    allow_origin_regex=r"^https://(web\\.telegram\\.org|t\\.me|telegram\\.org)$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Telegram-Init-Data"],
@@ -199,7 +215,7 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
     sub_active = bool(sub_rows and sub_rows[0].get("expires_at") and sub_rows[0]["expires_at"] > now_dt)
     plan = "business" if admin_business else (sub_rows[0].get("plan", "pro").lower() if sub_active and sub_rows else "free")
     if plan == "free":
-        amounts = re.findall(r"\d+(?:[.,]\d+)?", profile.price.replace(" ", ""))
+        amounts = re.findall(r"\\d+(?:[.,]\\d+)?", profile.price.replace(" ", ""))
         if not amounts:
             raise HTTPException(403, "На Free укажи цену числом в евро. Максимум — 70 €.")
         highest_price = max(float(value.replace(",", ".")) for value in amounts)
@@ -355,12 +371,12 @@ async def apply_campaign(campaign_id: int, request: ApplicationRequest, telegram
     delivery_error = "На сервере не настроен BOT_TOKEN"
     if BOT_TOKEN:
         msg = (
-            "📩 Новый отклик на ваше объявление\n\n"
-            f"📣 {campaign.get('title') or 'Объявление'}\n"
-            f"Бюджет: {campaign.get('budget', '')} {campaign.get('currency', '')}\n\n"
-            f"Блогер: {display_name} (@{username or 'нет username'})\n"
-            f"Подписчики: {blogger.get('followers', 'не указано')}\n"
-            f"Сообщение: {request.message or 'Без сообщения'}\n"
+            "📩 Новый отклик на ваше объявление\\n\\n"
+            f"📣 {campaign.get('title') or 'Объявление'}\\n"
+            f"Бюджет: {campaign.get('budget', '')} {campaign.get('currency', '')}\\n\\n"
+            f"Блогер: {display_name} (@{username or 'нет username'})\\n"
+            f"Подписчики: {blogger.get('followers', 'не указано')}\\n"
+            f"Сообщение: {request.message or 'Без сообщения'}\\n"
             + (f"Профиль: https://t.me/{username}" if username else f"Telegram ID: {telegram_id}")
         )
         try:
@@ -431,7 +447,7 @@ async def pro_status(telegram_id: int = __import__("fastapi").Depends(user_id), 
     rows = await db_request("GET", "user_subscriptions", params={"select": "expires_at", "user_id": f"eq.{telegram_id}", "limit": "1"})
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     active = bool(rows and rows[0].get("expires_at") and rows[0]["expires_at"] > now)
-    plan = rows[0].get("plan", "pro") if active and rows else "free"
+    plan = rows[0].get("plan", "free") if active and rows else "free"
     return {"active": active, "plan": plan, "admin": False, "expires_at": rows[0].get("expires_at") if rows else None}
 
 async def activate_subscription(invoice_id: str, telegram_id: int, expected_plan: str):
