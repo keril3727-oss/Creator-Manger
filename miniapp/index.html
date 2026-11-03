@@ -334,7 +334,12 @@
     const box=document.getElementById('myCampaignList');
     try{
       const items=await api('/api/campaigns/mine');
-      box.innerHTML=items.length?items.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:120px;object-fit:cover">':'<div class="cover">▣</div>')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+' · '+esc(x.status||'open')+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="editCampaign('+Number(x.id)+')">Редактировать</button><button class="small-btn" style="margin-top:7px" onclick="removeCampaign('+Number(x.id)+')">Удалить</button></div></article>').join(''):'<div class="empty">У тебя пока нет объявлений.</div>';
+      const applications=await api('/api/campaigns/mine/applications');
+      box.innerHTML=items.length?items.map(x=>{
+        const received=applications.filter(a=>Number(a.campaign_id)===Number(x.id));
+        const receivedHtml=received.length?'<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)"><strong>Отклики: '+received.length+'</strong>'+received.map(a=>'<div style="margin-top:9px;padding:10px;border-radius:10px;background:#0b1c30"><b>'+esc(a.blogger?.display_name||'Блогер')+'</b> · '+esc(String(a.blogger?.followers??'—'))+' подписчиков<br><span class="note">'+esc(a.blogger?.username?'@'+a.blogger.username:'Telegram ID '+a.blogger_id)+'</span><p style="margin:6px 0;color:#c1d2e3">'+esc(a.message||'Без сообщения')+'</p><button class="small-btn" onclick="contactBlogger('+JSON.stringify(a.blogger?.username||'')+')">Написать блогеру</button></div>').join('')+'</div>':'<p class="note" style="margin-top:10px">Откликов пока нет.</p>';
+        return '<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:120px;object-fit:cover">':'<div class="cover">▣</div>')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+' · '+esc(x.status||'open')+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="editCampaign('+Number(x.id)+')">Редактировать</button><button class="small-btn" style="margin-top:7px" onclick="removeCampaign('+Number(x.id)+')">Удалить</button>'+receivedHtml+'</div></article>';
+      }).join(''):'<div class="empty">У тебя пока нет объявлений.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
   async function editCampaign(id){
