@@ -90,9 +90,9 @@ async def lifespan(app: FastAPI):
     telegram_app = build_application()
     telegram_app.add_error_handler(telegram_error_handler)
     await telegram_app.initialize()
-    # Start polling before the update-processing loop, as recommended by PTB.
-    await telegram_app.updater.start_polling(drop_pending_updates=False)
+    # Start the PTB application before its updater begins delivering updates.
     await telegram_app.start()
+    await telegram_app.updater.start_polling(drop_pending_updates=False)
     app.state.telegram_app = telegram_app
     logger.info("Telegram bot polling started")
     try:
