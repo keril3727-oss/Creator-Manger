@@ -1,3 +1,4 @@
+import logging
 import os
 import sqlite3
 from telegram import (
@@ -13,6 +14,7 @@ from telegram.ext import (
     MessageHandler,
     ContextTypes,
     filters,
+    TypeHandler,
 )
 
 TOKEN = os.getenv("BOT_TOKEN")
@@ -20,6 +22,20 @@ DB = "creator_manager.db"
 
 # Временное ожидание сообщения от рекламодателя
 waiting = {}
+logger = logging.getLogger("creator_manager.telegram")
+
+
+async def log_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
+    text = message.text if message and message.text else ""
+    command = text.split()[0] if text.startswith("/") else "non-command"
+    logger.info(
+        "Telegram update received: update_id=%s type=%s command=%s",
+        update.update_id,
+        type(update).__name__,
+        command,
+    )
+
 
 
 def db():
@@ -290,6 +306,8 @@ def build_application():
         raise RuntimeError("Не задан BOT_TOKEN")
     init_db()
     telegram_app = Application.builder().token(TOKEN).build()
+    # Log update arrival before command/message handlers; don't log message bodies.
+    telegram_app.add_handler(TypeHandler(Update, log_update), group=-1)
     telegram_app.add_handler(CommandHandler("start", start))
     telegram_app.add_handler(CommandHandler("addad", addad))
     telegram_app.add_handler(CommandHandler("myads", myads))
