@@ -106,21 +106,28 @@ async def keep_polling_alive(telegram_app):
 async def lifespan(app: FastAPI):
     telegram_app = build_application()
     telegram_app.add_error_handler(telegram_error_handler)
-    await telegram_app.initialize()
-    await telegram_app.start()
-    await telegram_app.updater.start_polling(drop_pending_updates=False)
-    app.state.telegram_app = telegram_app
-    polling_monitor = asyncio.create_task(keep_polling_alive(telegram_app))
-    logger.info("Telegram bot polling started")
+    polling_monitor = None
     try:
+        await telegram_app.initialize()
+        # PTB's documented startup order: start fetching updates before
+        # starting the Application's update-processing task.
+        await telegram_app.updater.start_polling(
+            drop_pending_updates=False,
+            bootstrap_retries=-1,
+        )
+        await telegram_app.start()
+        app.state.telegram_app = telegram_app
+        polling_monitor = asyncio.create_task(keep_polling_alive(telegram_app))
+        logger.info("Telegram bot polling started")
         yield
     finally:
         logger.info("Stopping Telegram bot polling")
-        polling_monitor.cancel()
-        try:
-            await polling_monitor
-        except asyncio.CancelledError:
-            pass
+        if polling_monitor:
+            polling_monitor.cancel()
+            try:
+                await polling_monitor
+            except asyncio.CancelledError:
+                pass
         if telegram_app.updater and telegram_app.updater.running:
             await telegram_app.updater.stop()
         if telegram_app.running:
