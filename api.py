@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -85,20 +86,41 @@ async def db_request(method: str, table: str, *, params=None, payload=None, pref
 async def telegram_error_handler(update, context):
     logger.error("Telegram handler failed", exc_info=context.error)
 
+async def keep_polling_alive(telegram_app):
+    """Restart Telegram polling if the updater unexpectedly stops."""
+    updater = telegram_app.updater
+    while True:
+        await asyncio.sleep(15)
+        if updater and not updater.running:
+            logger.warning("Telegram polling stopped unexpectedly; restarting")
+            try:
+                await updater.start_polling(drop_pending_updates=False)
+                logger.info("Telegram polling restarted")
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Telegram polling restart failed; will retry")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     telegram_app = build_application()
     telegram_app.add_error_handler(telegram_error_handler)
     await telegram_app.initialize()
-    # Start the PTB application before its updater begins delivering updates.
     await telegram_app.start()
     await telegram_app.updater.start_polling(drop_pending_updates=False)
     app.state.telegram_app = telegram_app
+    polling_monitor = asyncio.create_task(keep_polling_alive(telegram_app))
     logger.info("Telegram bot polling started")
     try:
         yield
     finally:
         logger.info("Stopping Telegram bot polling")
+        polling_monitor.cancel()
+        try:
+            await polling_monitor
+        except asyncio.CancelledError:
+            pass
         if telegram_app.updater and telegram_app.updater.running:
             await telegram_app.updater.stop()
         if telegram_app.running:
