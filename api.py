@@ -296,6 +296,26 @@ async def admin_add_company(company: CompanyCreate, init_data: str = Header(defa
             raise HTTPException(400, "Ссылка должна начинаться с https:// или http://")
     return await db_request("POST", "companies", payload=payload)
 
+@app.delete("/api/admin/companies/{company_id}")
+async def admin_delete_company(company_id: int, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    rows = await db_request("GET", "companies", params={"select": "id", "id": f"eq.{company_id}", "limit": "1"})
+    if not rows:
+        raise HTTPException(404, "Компания не найдена")
+    await db_request("DELETE", "companies", params={"id": f"eq.{company_id}"}, prefer="return=minimal")
+    return {"ok": True}
+
+@app.delete("/api/admin/campaigns/{campaign_id}")
+async def admin_delete_campaign(campaign_id: int, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    rows = await db_request("GET", "campaigns", params={"select": "id", "id": f"eq.{campaign_id}", "limit": "1"})
+    if not rows:
+        raise HTTPException(404, "Объявление не найдено")
+    await db_request("DELETE", "campaigns", params={"id": f"eq.{campaign_id}"}, prefer="return=minimal")
+    return {"ok": True}
+
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "bloggers", params={
