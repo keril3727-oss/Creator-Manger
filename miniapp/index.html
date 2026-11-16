@@ -120,6 +120,9 @@
           <select name="contact_type"><option value="telegram">Telegram</option><option value="phone">Телефон</option><option value="email">Email</option><option value="website">Сайт</option></select>
           <input name="contact_value" placeholder="@username / телефон / email / ссылка" required maxlength="200">
           <input name="website" placeholder="Сайт компании (необязательно)" maxlength="300">
+          <label class="note" style="display:block">Фото или логотип компании (JPG, PNG, WEBP до 5 МБ)</label>
+          <input name="company_photo" type="file" accept="image/jpeg,image/png,image/webp">
+          <img id="companyPhotoPreview" alt="Предпросмотр логотипа" style="display:none;width:100%;max-height:150px;object-fit:contain;border-radius:12px;background:#fff;padding:8px">
           <button class="primary" type="submit">Добавить компанию</button>
         </form>
         <p id="adminAddStatus" class="note" aria-live="polite"></p>
@@ -283,8 +286,9 @@
     companyForm.addEventListener('submit',async event=>{
       event.preventDefault();status.textContent='Добавляю компанию…';
       const f=new FormData(companyForm),value=name=>String(f.get(name)||'').trim();
-      const payload={name:value('name'),niche:value('niche'),description:value('description'),contact_type:value('contact_type'),contact_value:value('contact_value'),website:value('website')||null,logo_url:null};
-      try{await api('/api/admin/companies',{method:'POST',body:JSON.stringify(payload)});status.textContent='Компания добавлена в каталог.';companyForm.reset();if(catalogKind==='company')await loadBloggers();}
+      const photo=companyForm.elements.namedItem('company_photo').files[0];
+      const payload={name:value('name'),niche:value('niche'),description:value('description'),contact_type:value('contact_type'),contact_value:value('contact_value'),website:value('website')||null,logo_url:photo?await uploadImage(photo):null};
+      try{await api('/api/admin/companies',{method:'POST',body:JSON.stringify(payload)});status.textContent='Компания добавлена в каталог.';companyForm.reset();document.getElementById('companyPhotoPreview').style.display='none';if(catalogKind==='company')await loadBloggers();}
       catch(error){status.textContent='Ошибка: '+error.message;}
     });
   }
@@ -387,7 +391,7 @@
       document.getElementById('buyActionSub').textContent='Каталог рекламодателей и брендов';
       document.getElementById('sellActionTitle').textContent='Добавить рекламу';
       document.getElementById('sellActionSub').textContent='Разместить предложение компании';
-      document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.logo_url?'<img src="'+esc(x.logo_url)+'" alt="" style="width:100%;height:130px;object-fit:contain;background:#fff;padding:12px">':'<div class="cover">🏢</div>')+'<div class="card-body"><div class="name">'+esc(x.name)+'</div><div class="niche">'+esc(x.niche||'Компания')+'</div><div class="desc">'+esc(x.description||'')+'</div>'+(x.website?'<div class="desc"><a href="'+esc(x.website)+'" target="_blank" rel="noopener" style="color:#79cfff">Сайт компании ↗</a></div>':'')+'<button class="small-btn" data-company-contact data-contact-type="'+esc(x.contact_type)+'" data-contact-value="'+esc(x.contact_value)+'">Связаться</button></div></article>').join(''):'<div class="empty">Компаний пока нет. Добавь первую через админ-панель.</div>';
+      document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.logo_url?'<img src="'+esc(x.logo_url)+'" alt="" style="width:100%;height:130px;object-fit:contain;background:#fff;padding:12px">':'<div class="cover">🏢</div>')+'<div class="card-body"><div class="name">'+esc(x.name)+'</div><div class="niche">'+esc(x.niche||'Компания')+'</div><div class="desc">'+esc(x.description||'')+'</div>'+(x.website?'<div class="desc"><a href="'+esc(x.website)+'" target="_blank" rel="noopener" style="color:#79cfff">Сайт компании ↗</a></div>':'')+'<button class="small-btn" data-company-contact data-contact-type="'+esc(x.contact_type)+'" data-contact-value="'+esc(x.contact_value)+'">Связаться</button>'+(Number(telegramUser?.id)===8785362269?'<button class="small-btn" style="margin-top:7px" data-delete-company="'+Number(x.id)+'">Удалить эту компанию</button>':'')+'</div></article>').join(''):'<div class="empty">Компаний пока нет. Добавь первую через админ-панель.</div>';
       return;
     }
     const list=bloggers.filter(x=>nicheMatches(x.niche,selectedNiche)&&
@@ -424,6 +428,13 @@
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){notify('Выбери JPG, PNG или WEBP до 5 МБ');e.target.value='';preview.style.display='none';return;}
     preview.src=URL.createObjectURL(file);preview.style.display='block';
   }));
+  const companyPhotoInput=document.querySelector('#adminCompanyForm input[name="company_photo"]');
+  if(companyPhotoInput)companyPhotoInput.addEventListener('change',event=>{
+    const file=event.target.files[0],preview=document.getElementById('companyPhotoPreview');
+    if(!file){preview.style.display='none';return;}
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>5*1024*1024){notify('Выбери JPG, PNG или WEBP до 5 МБ');event.target.value='';preview.style.display='none';return;}
+    preview.src=URL.createObjectURL(file);preview.style.display='block';
+  });
   async function uploadImage(file){
     const upload=await fetch(API_BASE+'/api/upload-image',{method:'POST',headers:{'Content-Type':file.type,'X-Telegram-Init-Data':initData},body:file});
     const result=await upload.json().catch(()=>({}));
@@ -521,7 +532,7 @@
       const selectedCampaignTopic=document.getElementById('campaignTopicFilter')?.value||'Все';
       const filteredItems=selectedCampaignTopic==='Все'?items:items.filter(x=>nicheMatches(x.niche,selectedCampaignTopic));
       document.getElementById('campaignCount').textContent=filteredItems.length+' открытых';
-      box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+',this)">Откликнуться</button></div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
+      box.innerHTML=filteredItems.length?filteredItems.map(x=>'<article class="card">'+(x.image_url?'<img src="'+esc(x.image_url)+'" alt="" style="width:100%;height:150px;object-fit:cover">':'')+'<div class="card-body"><div class="name">'+esc(x.title)+'</div><div class="niche">'+esc(x.niche)+'</div><div class="desc">'+esc(x.description||"")+'</div><div class="price">'+Number(x.budget).toLocaleString('ru-RU')+' '+esc(x.currency)+'</div><button class="small-btn" onclick="applyCampaign('+Number(x.id)+',this)">Откликнуться</button>'+(Number(telegramUser?.id)===8785362269?'<button class="small-btn" style="margin-top:7px" data-delete-campaign-admin="'+Number(x.id)+'">Удалить это объявление</button>':'')+'</div></article>').join(''):'<div class="empty">Пока нет объявлений компаний. Рекламодатель может опубликовать первое ниже.</div>';
     }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
   document.getElementById('campaignImage').addEventListener('change',e=>{
@@ -647,7 +658,23 @@
     const box=document.getElementById('proStatus');
     if(box)box.textContent='Ошибка приложения: '+(e.reason?.message||String(e.reason||'ошибка'));
   });
-  document.addEventListener('click',event=>{
+  document.addEventListener('click',async event=>{
+    const deleteCompany=event.target.closest('[data-delete-company]');
+    if(deleteCompany){
+      const id=Number(deleteCompany.dataset.deleteCompany);
+      if(!confirm('Удалить только эту компанию?'))return;
+      try{await api('/api/admin/companies/'+id,{method:'DELETE'});notify('Компания удалена');await loadBloggers();}
+      catch(error){notify('Не удалось удалить: '+error.message);}
+      return;
+    }
+    const deleteCampaign=event.target.closest('[data-delete-campaign-admin]');
+    if(deleteCampaign){
+      const id=Number(deleteCampaign.dataset.deleteCampaignAdmin);
+      if(!confirm('Удалить только это объявление?'))return;
+      try{await api('/api/admin/campaigns/'+id,{method:'DELETE'});notify('Объявление удалено');await loadCampaigns();}
+      catch(error){notify('Не удалось удалить: '+error.message);}
+      return;
+    }
     const companyButton=event.target.closest('[data-company-contact]');
     if(companyButton){contactCompany(companyButton.dataset.contactType,companyButton.dataset.contactValue);return;}
     const button=event.target.closest('button');
