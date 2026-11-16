@@ -112,13 +112,24 @@
           <textarea name="description" placeholder="Описание предложения и требования"></textarea>
           <button class="primary" type="submit">Добавить рекламодателя</button>
         </form>
+        <form id="adminCompanyForm" class="form" style="margin-top:16px;padding-top:14px;border-top:1px solid #1d3b5c">
+          <strong>Добавить компанию в каталог</strong>
+          <input name="name" placeholder="Название компании" required maxlength="100">
+          <input name="niche" placeholder="Сфера деятельности" maxlength="80">
+          <textarea name="description" placeholder="Краткое описание компании" maxlength="1500"></textarea>
+          <select name="contact_type"><option value="telegram">Telegram</option><option value="phone">Телефон</option><option value="email">Email</option><option value="website">Сайт</option></select>
+          <input name="contact_value" placeholder="@username / телефон / email / ссылка" required maxlength="200">
+          <input name="website" placeholder="Сайт компании (необязательно)" maxlength="300">
+          <button class="primary" type="submit">Добавить компанию</button>
+        </form>
         <p id="adminAddStatus" class="note" aria-live="polite"></p>
       </section>
       <div class="tariff-switch" style="margin:0 0 14px 0;width:100%;justify-content:stretch">
         <button id="authorsTab" class="active" style="flex:1" type="button" onclick="setCatalogKind('author')">Блогеры</button>
         <button id="channelsTab" style="flex:1" type="button" onclick="setCatalogKind('channel')">TG-каналы</button>
+        <button id="companiesTab" style="flex:1" type="button" onclick="setCatalogKind('company')">Компании</button>
       </div>
-      <div class="role-switch" style="margin:0 0 16px">
+      <div class="role-switch" id="roleSwitch" style="margin:0 0 16px">
         <button class="role-card" type="button" onclick="openRole('buy')"><span class="role-icon">🛒</span><span><strong id="buyActionTitle">Заказать рекламу</strong><small id="buyActionSub">Найти блогера для рекламы</small></span></button>
         <button class="role-card" type="button" onclick="openRole('sell')"><span class="role-icon">📣</span><span><strong id="sellActionTitle">Выставить рекламу</strong><small id="sellActionSub">Разместить своё предложение</small></span></button>
       </div>
@@ -268,6 +279,14 @@
       try{await api('/api/admin/campaigns',{method:'POST',body:JSON.stringify(payload)});status.textContent='Объявление рекламодателя опубликовано в каталоге.';advertiserForm.reset();await loadCampaigns();}
       catch(error){status.textContent='Ошибка: '+error.message;}
     });
+    const companyForm=document.getElementById('adminCompanyForm');
+    companyForm.addEventListener('submit',async event=>{
+      event.preventDefault();status.textContent='Добавляю компанию…';
+      const f=new FormData(companyForm),value=name=>String(f.get(name)||'').trim();
+      const payload={name:value('name'),niche:value('niche'),description:value('description'),contact_type:value('contact_type'),contact_value:value('contact_value'),website:value('website')||null,logo_url:null};
+      try{await api('/api/admin/companies',{method:'POST',body:JSON.stringify(payload)});status.textContent='Компания добавлена в каталог.';companyForm.reset();if(catalogKind==='company')await loadBloggers();}
+      catch(error){status.textContent='Ошибка: '+error.message;}
+    });
   }
 
   function applyTelegramAccount(){
@@ -334,7 +353,7 @@
     const requestVersion=++catalogLoadVersion;
     box.innerHTML='<div class="empty">Загружаю каталог…</div>';
     try {
-      const result=await api('/api/bloggers?kind='+encodeURIComponent(requestedKind));
+      const result=requestedKind==='company'?await api('/api/companies'):await api('/api/bloggers?kind='+encodeURIComponent(requestedKind));
       // Ignore slower responses from a previously selected catalog.
       if(requestVersion!==catalogLoadVersion||requestedKind!==catalogKind)return;
       bloggers=Array.isArray(result)?result:[];
@@ -347,14 +366,49 @@
   }
   function nicheMatches(value,topic){if(topic==='Все')return true;return String(value||'').split(/[,;|]/).some(v=>{const clean=v.trim();return clean===topic||(topic==='Другое'&&clean.startsWith('Другое:'));});}
   function renderCatalogTopics(){const box=document.getElementById('chips'),q=(document.getElementById('topicCatalogSearch').value||'').trim().toLowerCase();const topics=NICHE_TOPICS.filter(t=>t.toLowerCase().includes(q));box.innerHTML='<button class="chip '+(selectedNiche==='Все'?'active':'')+'" data-niche="Все" onclick="setNiche(this)">Все</button>'+topics.map(t=>'<button class="chip '+(selectedNiche===t?'active':'')+'" data-niche="'+esc(t)+'" onclick="setNiche(this)">'+esc(t)+'</button>').join('');}
+  function contactCompany(type,value){
+    const clean=String(value||'').trim();
+    let url='';
+    if(type==='telegram')url='https://t.me/'+encodeURIComponent(clean.replace(/^@/,''));
+    else if(type==='phone')url='tel:'+clean.replace(/[^+0-9]/g,'');
+    else if(type==='email')url='mailto:'+clean;
+    else if(type==='website'&&/^https?:\\/\\//i.test(clean))url=clean;
+    if(!url){notify('Контакт компании указан некорректно');return;}
+    if(tg&&type==='telegram')tg.openTelegramLink(url);
+    else if(tg&&type==='website')tg.openLink(url);
+    else window.open(url,'_blank','noopener');
+  }
   function renderCards(){
     const q=(document.getElementById('search').value||'').toLowerCase();
+    if(catalogKind==='company'){
+      const list=bloggers.filter(x=>(x.name+" "+(x.niche||"")+" "+(x.description||"")).toLowerCase().includes(q));
+      document.getElementById('count').textContent=list.length+' компаний';
+      document.getElementById('buyActionTitle').textContent='Найти компанию';
+      document.getElementById('buyActionSub').textContent='Каталог рекламодателей и брендов';
+      document.getElementById('sellActionTitle').textContent='Добавить рекламу';
+      document.getElementById('sellActionSub').textContent='Разместить предложение компании';
+      document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.logo_url?'<img src="'+esc(x.logo_url)+'" alt="" style="width:100%;height:130px;object-fit:contain;background:#fff;padding:12px">':'<div class="cover">🏢</div>')+'<div class="card-body"><div class="name">'+esc(x.name)+'</div><div class="niche">'+esc(x.niche||'Компания')+'</div><div class="desc">'+esc(x.description||'')+'</div>'+(x.website?'<div class="desc"><a href="'+esc(x.website)+'" target="_blank" rel="noopener" style="color:#79cfff">Сайт компании ↗</a></div>':'')+'<button class="small-btn" onclick="contactCompany('+JSON.stringify(x.contact_type)+','+JSON.stringify(x.contact_value)+')">Связаться</button></div></article>').join(''):'<div class="empty">Компаний пока нет. Добавь первую через админ-панель.</div>';
+      return;
+    }
     const list=bloggers.filter(x=>nicheMatches(x.niche,selectedNiche)&&
       (x.display_name+" "+x.niche+" "+(x.description||"")+" "+(x.ad_formats||"")).toLowerCase().includes(q));
     document.getElementById('count').textContent=list.length+(catalogKind==="author"?" авторов":" каналов");
-    document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger(\''+esc(x.username||'')+'\')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
+    document.getElementById('cards').innerHTML=list.length?list.map(x=>'<article class="card">'+(x.photo_url?'<img src="'+esc(x.photo_url)+'" alt="" style="width:100%;height:130px;object-fit:cover">':'<div class="cover">✦</div>')+'<div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+esc(x.niche)+'</div>'+(catalogKind==="channel"&&x.channel_url?'<div class="desc"><a href="'+esc(x.channel_url)+'" target="_blank" rel="noopener" style="color:#2563eb">Открыть канал ↗</a></div>':'')+'<div class="stats"><span>👁 Охваты: '+Number(x.reach||0).toLocaleString('ru-RU')+'</span><span>👥 '+Number(x.followers||0).toLocaleString('ru-RU')+' подписчиков</span></div><div class="desc">Форматы: '+esc(x.ad_formats||"Не указаны")+'</div><div class="price">Цена рекламы: '+esc(x.price||"По договорённости")+'</div><button class="small-btn" onclick="contactBlogger('+JSON.stringify(x.username||'')+')">Связаться в Telegram</button></div></article>').join(''):'<div class="empty">Пока нет профилей в этом разделе. Добавь свой профиль.</div>';
   }
-  function setCatalogKind(kind){catalogKind=kind;document.getElementById('authorsTab').classList.toggle('active',kind==='author');document.getElementById('channelsTab').classList.toggle('active',kind==='channel');document.getElementById('buyActionTitle').textContent=kind==='author'?'Заказать рекламу':'Найти рекламу';document.getElementById('buyActionSub').textContent=kind==='author'?'Найти блогера для рекламы':'Найти TG-канал для размещения';document.getElementById('sellActionTitle').textContent=kind==='author'?'Выставить рекламу':'Продать рекламу';document.getElementById('sellActionSub').textContent=kind==='author'?'Разместить предложение автора':'Добавить свой TG-канал';loadBloggers();}
+  function setCatalogKind(kind){
+    catalogKind=kind;
+    document.getElementById('authorsTab').classList.toggle('active',kind==='author');
+    document.getElementById('channelsTab').classList.toggle('active',kind==='channel');
+    document.getElementById('companiesTab').classList.toggle('active',kind==='company');
+    document.getElementById('buyActionTitle').textContent=kind==='author'?'Заказать рекламу':kind==='channel'?'Найти рекламу':'Найти компанию';
+    document.getElementById('buyActionSub').textContent=kind==='author'?'Найти блогера для рекламы':kind==='channel'?'Найти TG-канал для размещения':'Каталог рекламодателей и брендов';
+    document.getElementById('sellActionTitle').textContent=kind==='author'?'Выставить рекламу':kind==='channel'?'Продать рекламу':'Добавить рекламу';
+    document.getElementById('sellActionSub').textContent=kind==='author'?'Разместить предложение автора':kind==='channel'?'Добавить свой TG-канал':'Разместить предложение компании';
+    document.getElementById('roleSwitch').style.display=kind==='company'?'none':'grid';
+    document.getElementById('topicCatalogSearch').style.display=kind==='company'?'none':'block';
+    document.getElementById('chips').style.display=kind==='company'?'none':'flex';
+    loadBloggers();
+  }
   function switchProfileForm(kind){
     document.getElementById('authorProfileForm').style.display=kind==='author'?'grid':'none';
     document.getElementById('channelProfileForm').style.display=kind==='channel'?'grid':'none';
