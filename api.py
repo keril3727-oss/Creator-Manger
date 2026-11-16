@@ -222,14 +222,38 @@ async def health():
     return {"status": "ok"}
 
 @app.get("/api/bloggers")
-async def bloggers(kind: str = "author"):
+async def bloggers(kind: str = "author", init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     if kind not in ("author", "channel"):
         raise HTTPException(400, "Неизвестный тип площадки")
+    admin = bool(init_data and is_business_admin(init_data))
+    params = {
+        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url,approval_status",
+        "platform_type": f"eq.{kind}", "order": "created_at.desc",
+    }
+    if not admin:
+        params["approval_status"] = "eq.approved"
+    return await db_request("GET", "bloggers", params=params)
+    
+@app.get("/api/admin/profiles/pending")
+async def pending_profiles(init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
     return await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url",
-        "platform_type": f"eq.{kind}",
-        "order": "created_at.desc",
+        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url,approval_status,created_at",
+        "approval_status": "eq.pending", "order": "created_at.asc",
     })
+
+@app.patch("/api/admin/profiles/{profile_id}/approval")
+async def set_profile_approval(profile_id: int, body: dict, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    status = body.get("status")
+    if status not in ("approved", "rejected"):
+        raise HTTPException(400, "Неизвестное решение модерации")
+    rows = await db_request("PATCH", "bloggers", params={"telegram_id": f"eq.{profile_id}"}, payload={"approval_status": status})
+    if not rows:
+        raise HTTPException(404, "Профиль не найден")
+    return {"ok": True, "approval_status": status}
 
 @app.delete("/api/admin/bloggers")
 async def clear_test_bloggers(init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
@@ -248,6 +272,7 @@ async def admin_add_blogger(profile: AdminBloggerProfile, init_data: str = Heade
     payload = profile.model_dump(exclude={"owner_telegram_id"})
     payload["username"] = payload["username"].lstrip("@")
     payload["telegram_id"] = profile.owner_telegram_id
+    payload["approval_status"] = "approved"
     existing = await db_request("GET", "bloggers", params={
         "select": "telegram_id", "telegram_id": f"eq.{profile.owner_telegram_id}", "limit": "1",
     })
@@ -267,7 +292,14 @@ async def admin_add_advertiser(campaign: AdminAdvertiserCampaign, init_data: str
     return await db_request("POST", "campaigns", payload=payload)
 
 @app.get("/api/companies")
-async def get_companies():
+async def get_companies(init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    user = verify_init_data_full(init_data)
+    if int(user.get("id", 0)) != ADMIN_TELEGRAM_ID:
+        profiles = await db_request("GET", "bloggers", params={
+            "select": "approval_status", "telegram_id": f"eq.{int(user['id'])}", "limit": "1",
+        })
+        if not profiles or profiles[0].get("approval_status") != "approved":
+            raise HTTPException(403, "Сначала создай профиль блогера или TG-канала и дождись одобрения администратора. После одобрения откроются контакты компаний.")
     return await db_request("GET", "companies", params={
         "select": "id,name,niche,description,contact_type,contact_value,website,logo_url,created_at",
         "order": "created_at.desc",
@@ -329,7 +361,7 @@ async def admin_delete_campaign(campaign_id: int, init_data: str = Header(defaul
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
     rows = await db_request("GET", "bloggers", params={
-        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url",
+        "select": "telegram_id,username,display_name,platform_type,channel_url,niche,description,followers,reach,ad_formats,price,photo_url,approval_status",
         "telegram_id": f"eq.{telegram_id}", "limit": "1",
     })
     return rows[0] if rows else {}
@@ -359,6 +391,7 @@ async def save_profile(profile: Profile, telegram_id: int = __import__("fastapi"
         raise HTTPException(400, "Добавь username в настройках Telegram, чтобы создать профиль")
     payload["username"] = telegram_username
     payload["telegram_id"] = telegram_id
+    payload["approval_status"] = "pending"
     existing = await db_request("GET", "bloggers", params={
         "select": "telegram_id", "telegram_id": f"eq.{telegram_id}", "limit": "1",
     })
