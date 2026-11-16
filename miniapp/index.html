@@ -648,6 +648,8 @@
     if(box)box.textContent='Ошибка приложения: '+(e.reason?.message||String(e.reason||'ошибка'));
   });
   document.addEventListener('click',event=>{
+    const companyButton=event.target.closest('[data-company-contact]');
+    if(companyButton){contactCompany(companyButton.dataset.contactType,companyButton.dataset.contactValue);return;}
     const button=event.target.closest('button');
     if(!button)return;
     if(button.id==='buyProUsdt'){event.preventDefault();buyPro('USDT');}
