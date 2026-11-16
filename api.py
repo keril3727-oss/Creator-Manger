@@ -284,10 +284,12 @@ async def admin_add_company(company: CompanyCreate, init_data: str = Header(defa
         if not re.fullmatch(r"[A-Za-z0-9_]{5,32}", payload["contact_value"]):
             raise HTTPException(400, "Укажи корректный Telegram username")
     elif payload["contact_type"] == "email":
-        if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", payload["contact_value"]):
+        email = payload["contact_value"].strip()
+        if email.count("@") != 1 or "." not in email.rsplit("@", 1)[-1] or any(ch.isspace() for ch in email):
             raise HTTPException(400, "Укажи корректный email")
     elif payload["contact_type"] == "phone":
-        if not re.fullmatch(r"[+0-9()\\-\\s]{6,30}", payload["contact_value"]):
+        digits = re.sub(r"[^0-9]", "", payload["contact_value"])
+        if len(digits) < 6 or len(digits) > 15:
             raise HTTPException(400, "Укажи корректный номер телефона")
     elif payload["contact_type"] == "website":
         if not re.match(r"^https?://", payload["contact_value"], re.I):
