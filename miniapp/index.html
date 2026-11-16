@@ -286,10 +286,13 @@
     companyForm.addEventListener('submit',async event=>{
       event.preventDefault();status.textContent='Добавляю компанию…';
       const f=new FormData(companyForm),value=name=>String(f.get(name)||'').trim();
-      const photo=companyForm.elements.namedItem('company_photo').files[0];
-      const payload={name:value('name'),niche:value('niche'),description:value('description'),contact_type:value('contact_type'),contact_value:value('contact_value'),website:value('website')||null,logo_url:photo?await uploadImage(photo):null};
-      try{await api('/api/admin/companies',{method:'POST',body:JSON.stringify(payload)});status.textContent='Компания добавлена в каталог.';companyForm.reset();document.getElementById('companyPhotoPreview').style.display='none';if(catalogKind==='company')await loadBloggers();}
-      catch(error){status.textContent='Ошибка: '+error.message;}
+      try{
+        const photo=companyForm.elements.namedItem('company_photo').files[0];
+        const payload={name:value('name'),niche:value('niche'),description:value('description'),contact_type:value('contact_type'),contact_value:value('contact_value'),website:value('website')||null,logo_url:photo?await uploadImage(photo):null};
+        await api('/api/admin/companies',{method:'POST',body:JSON.stringify(payload)});
+        status.textContent='Компания добавлена в каталог.';companyForm.reset();document.getElementById('companyPhotoPreview').style.display='none';
+        if(catalogKind==='company')await loadBloggers();
+      }catch(error){status.textContent='Ошибка: '+error.message;}
     });
   }
 
