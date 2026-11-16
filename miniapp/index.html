@@ -485,7 +485,7 @@
       if(kind==='channel'&&(!channel_url||!/^https?:\/\/t\.me\//i.test(channel_url)))throw new Error('Укажи ссылку на канал в формате https://t.me/...');
       const profile={display_name:val('display_name'),platform_type:kind,channel_url,niche:val('niche'),followers:Number(val('followers')),reach:Number(val('reach')),ad_formats:val('ad_formats'),price:val('price'),description:val('description'),photo_url,username:(telegramUser?.username||val('username').replace(/^@/,''))};
       await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});
-      savedProfilePhoto=photo_url;note.textContent='Профиль сохранён и опубликован в каталоге.';notify('Профиль сохранён!');await loadBloggers();
+      savedProfilePhoto=photo_url;note.textContent='Профиль отправлен на проверку. Доступ к контактам компаний откроется после одобрения администратора.';notify('Профиль отправлен на модерацию');await loadBloggers();
     }catch(err){note.textContent='Не удалось сохранить: '+err.message;notify(err.message);}
     finally{profileSaving=false;button.disabled=false;button.textContent=previousText;}
   }
@@ -663,7 +663,8 @@
       }
       savedProfilePhoto=p.photo_url||null;
       if(savedProfilePhoto){const preview=form.querySelector('.profile-preview');preview.src=savedProfilePhoto;preview.style.display='block';}
-      form.querySelector('.profile-note').textContent='Текущий профиль загружен. Можно изменить и сохранить.';
+      const status=p.approval_status||'pending';
+      form.querySelector('.profile-note').textContent=status==='approved'?'Профиль одобрен. Доступ к контактам компаний открыт. Можно изменить профиль — после изменений потребуется повторное одобрение.':status==='rejected'?'Профиль отклонён. Исправь данные и отправь его на повторную проверку.':'Профиль ожидает одобрения администратора. Контакты компаний пока закрыты.';
     }catch(e){document.querySelectorAll('.profile-note').forEach(n=>n.textContent='Не удалось загрузить профиль: '+e.message);}
   }
 
