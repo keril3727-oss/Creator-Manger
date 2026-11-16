@@ -50,9 +50,11 @@ def verify_init_data_full(init_data: str) -> dict:
 def verify_init_data(init_data: str) -> int:
     return int(verify_init_data_full(init_data)["id"])
 
+ADMIN_TELEGRAM_ID = 8785362269
+
 def is_business_admin(init_data: str) -> bool:
     user = verify_init_data_full(init_data)
-    return str(user.get("username", "")).casefold() == "verpot"
+    return int(user.get("id", 0)) == ADMIN_TELEGRAM_ID
 
 async def db_request(method: str, table: str, *, params=None, payload=None, prefer="return=representation"):
     if not SUPABASE_URL or not SUPABASE_KEY:
@@ -170,6 +172,12 @@ class Campaign(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     contact_username: str = Field(min_length=5, max_length=32, pattern=r"^[A-Za-z0-9_]+$")
 
+class AdminBloggerProfile(Profile):
+    owner_telegram_id: int = Field(gt=0)
+
+class AdminAdvertiserCampaign(Campaign):
+    advertiser_telegram_id: int = Field(gt=0)
+
 class ApplicationRequest(BaseModel):
     message: str = Field(default="", max_length=1000)
 
@@ -223,6 +231,31 @@ async def clear_test_bloggers(init_data: str = Header(default="", alias="X-Teleg
         "telegram_id": "not.is.null",
     }, prefer="return=minimal")
 
+
+@app.post("/api/admin/bloggers")
+async def admin_add_blogger(profile: AdminBloggerProfile, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    payload = profile.model_dump(exclude={"owner_telegram_id"})
+    payload["username"] = payload["username"].lstrip("@")
+    payload["telegram_id"] = profile.owner_telegram_id
+    existing = await db_request("GET", "bloggers", params={
+        "select": "telegram_id", "telegram_id": f"eq.{profile.owner_telegram_id}", "limit": "1",
+    })
+    if existing:
+        return await db_request("PATCH", "bloggers", params={
+            "telegram_id": f"eq.{profile.owner_telegram_id}",
+        }, payload=payload)
+    return await db_request("POST", "bloggers", payload=payload)
+
+@app.post("/api/admin/campaigns")
+async def admin_add_advertiser(campaign: AdminAdvertiserCampaign, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    payload = campaign.model_dump(exclude={"advertiser_telegram_id"})
+    payload["contact_username"] = payload["contact_username"].lstrip("@")
+    payload["advertiser_id"] = campaign.advertiser_telegram_id
+    return await db_request("POST", "campaigns", payload=payload)
 
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
