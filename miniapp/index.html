@@ -83,6 +83,37 @@
       <div id="adminCatalogTools" style="display:none;margin:-3px 0 12px">
         <button class="small-btn" type="button" style="border-color:#9a4b55;color:#ffb4bd" onclick="clearTestBloggers()">Очистить все тестовые профили</button>
       </div>
+      <section id="adminAddPanel" style="display:none;margin:0 0 16px;padding:15px;border:1px solid #267ac0;border-radius:16px;background:#0b1c30">
+        <div class="section-head" style="margin-top:0"><h2>Админ-панель · Добавить контакты</h2><span class="count">Только @verpot</span></div>
+        <p class="note">Добавляй профили только с разрешения владельцев. Telegram username указывается без @.</p>
+        <form id="adminBloggerForm" class="form" style="margin-bottom:16px">
+          <strong>Добавить блогера / TG-канал</strong>
+          <input name="owner_telegram_id" type="number" min="1" placeholder="Telegram ID владельца" required>
+          <input name="display_name" placeholder="Имя блогера / название канала" required maxlength="60">
+          <select name="platform_type"><option value="author">Блогер</option><option value="channel">TG-канал</option></select>
+          <input name="username" placeholder="Telegram username владельца (без @)" required minlength="5" maxlength="32">
+          <input name="channel_url" placeholder="Ссылка на TG-канал (для канала)">
+          <input name="niche" placeholder="Тематика" required maxlength="50">
+          <input name="followers" type="number" min="0" placeholder="Подписчики" required>
+          <input name="reach" type="number" min="0" placeholder="Средний охват" required>
+          <input name="ad_formats" placeholder="Форматы рекламы" required maxlength="200">
+          <input name="price" placeholder="Цена рекламы, например 50 €" required maxlength="80">
+          <textarea name="description" placeholder="Описание аудитории и условий"></textarea>
+          <button class="primary" type="submit">Добавить в каталог блогеров</button>
+        </form>
+        <form id="adminAdvertiserForm" class="form">
+          <strong>Добавить рекламодателя / кампанию</strong>
+          <input name="advertiser_telegram_id" type="number" min="1" placeholder="Telegram ID рекламодателя" required>
+          <input name="title" placeholder="Название компании / кампании" required maxlength="100">
+          <input name="contact_username" placeholder="Контакт Telegram без @" required minlength="5" maxlength="32">
+          <input name="niche" placeholder="Тематика" required maxlength="300">
+          <input name="budget" type="number" min="0.01" step="0.01" placeholder="Бюджет" required>
+          <select name="currency"><option value="EUR">EUR €</option><option value="USD">USD $</option><option value="BYN">BYN</option><option value="RUB">RUB ₽</option></select>
+          <textarea name="description" placeholder="Описание предложения и требования"></textarea>
+          <button class="primary" type="submit">Добавить рекламодателя</button>
+        </form>
+        <p id="adminAddStatus" class="note" aria-live="polite"></p>
+      </section>
       <div class="tariff-switch" style="margin:0 0 14px 0;width:100%;justify-content:stretch">
         <button id="authorsTab" class="active" style="flex:1" type="button" onclick="setCatalogKind('author')">Блогеры</button>
         <button id="channelsTab" style="flex:1" type="button" onclick="setCatalogKind('channel')">TG-каналы</button>
@@ -204,6 +235,40 @@
   function toggleTopic(picker,topic){const key=picker.dataset.topicPicker,selected=topicSelections.get(key)||[];if(selected.includes(topic))topicSelections.set(key,selected.filter(t=>t!==topic));else if(selected.length<5)topicSelections.set(key,[...selected,topic]);else{notify('Можно выбрать максимум 5 тематик');return;}renderTopicPicker(picker);}
   function filterTopicOptions(input){renderTopicPicker(input.closest('.topic-picker'));}
   document.querySelectorAll('.topic-picker').forEach(p=>{initTopicPicker(p);p.querySelector('.topic-custom').addEventListener('input',()=>writeTopicValue(p));});
+
+  function initAdminPanel(){
+    const panel=document.getElementById('adminAddPanel');
+    if(!panel || Number(telegramUser?.id)!==8785362269)return;
+    panel.style.display='block';
+    const status=document.getElementById('adminAddStatus');
+    const bloggerForm=document.getElementById('adminBloggerForm');
+    bloggerForm.addEventListener('submit',async event=>{
+      event.preventDefault();status.textContent='Добавляю профиль…';
+      const f=new FormData(bloggerForm),value=name=>String(f.get(name)||'').trim();
+      const payload={
+        owner_telegram_id:Number(value('owner_telegram_id')),display_name:value('display_name'),
+        platform_type:value('platform_type'),username:value('username').replace(/^@/,''),
+        channel_url:value('channel_url')||null,niche:value('niche'),followers:Number(value('followers')),
+        reach:Number(value('reach')),ad_formats:value('ad_formats'),price:value('price'),
+        description:value('description'),photo_url:null
+      };
+      try{await api('/api/admin/bloggers',{method:'POST',body:JSON.stringify(payload)});status.textContent='Профиль добавлен или обновлён в каталоге.';bloggerForm.reset();await loadBloggers();}
+      catch(error){status.textContent='Ошибка: '+error.message;}
+    });
+    const advertiserForm=document.getElementById('adminAdvertiserForm');
+    advertiserForm.addEventListener('submit',async event=>{
+      event.preventDefault();status.textContent='Добавляю рекламодателя…';
+      const f=new FormData(advertiserForm),value=name=>String(f.get(name)||'').trim();
+      const payload={
+        advertiser_telegram_id:Number(value('advertiser_telegram_id')),title:value('title'),
+        contact_username:value('contact_username').replace(/^@/,''),niche:value('niche'),
+        budget:Number(value('budget')),currency:value('currency'),description:value('description'),
+        image_url:null
+      };
+      try{await api('/api/admin/campaigns',{method:'POST',body:JSON.stringify(payload)});status.textContent='Объявление рекламодателя опубликовано в каталоге.';advertiserForm.reset();await loadCampaigns();}
+      catch(error){status.textContent='Ошибка: '+error.message;}
+    });
+  }
 
   function applyTelegramAccount(){
     if(!telegramUser)return;
@@ -551,6 +616,7 @@
   });
   window.saveProfile=saveProfile;
   applyTelegramAccount();
+  initAdminPanel();
   renderCatalogTopics();loadBloggers();loadPro();loadMyProfile();
 </script>
 </body>
