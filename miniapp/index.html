@@ -84,6 +84,10 @@
       <div id="adminCatalogTools" style="display:none;margin:-3px 0 12px">
         <button class="small-btn" type="button" style="border-color:#9a4b55;color:#ffb4bd" onclick="clearTestBloggers()">Очистить все тестовые профили</button>
       </div>
+      <section id="adminModerationPanel" style="display:none;margin:0 0 16px;padding:14px;border:1px solid #267ac0;border-radius:16px;background:#0b1c30">
+        <div class="section-head" style="margin:0"><h3>Заявки на одобрение профилей</h3><button class="small-btn" type="button" onclick="loadPendingProfiles()">Обновить</button></div>
+        <div id="pendingProfilesList" class="cards"><div class="empty">Загрузка заявок…</div></div>
+      </section>
       <section id="adminAddPanel" style="display:none;margin:0 0 16px;padding:15px;border:1px solid #267ac0;border-radius:16px;background:#0b1c30">
         <div class="section-head" style="margin-top:0"><h2>Админ-панель · Добавить контакты</h2><span class="count">Только @verpot</span></div>
         <p class="note">Добавляй профили только с разрешения владельцев. Telegram username указывается без @.</p>
@@ -255,6 +259,8 @@
     const panel=document.getElementById('adminAddPanel');
     if(!panel || Number(telegramUser?.id)!==8785362269)return;
     panel.style.display='block';
+    const moderation=document.getElementById('adminModerationPanel');
+    if(moderation){moderation.style.display='block';loadPendingProfiles();}
     const status=document.getElementById('adminAddStatus');
     const bloggerForm=document.getElementById('adminBloggerForm');
     bloggerForm.addEventListener('submit',async event=>{
@@ -295,6 +301,14 @@
         if(catalogKind==='company')await loadBloggers();
       }catch(error){status.textContent='Ошибка: '+error.message;}
     });
+  }
+
+  async function loadPendingProfiles(){
+    const box=document.getElementById('pendingProfilesList');if(!box)return;
+    try{
+      const items=await api('/api/admin/profiles/pending');
+      box.innerHTML=items.length?items.map(x=>'<article class="card"><div class="card-body"><div class="name">'+esc(x.display_name)+'</div><div class="niche">'+(x.platform_type==='channel'?'TG-канал':'Блогер')+' · '+esc(x.niche||'')+'</div><div class="desc">Telegram: @'+esc(x.username||'—')+' · Подписчики: '+Number(x.followers||0).toLocaleString('ru-RU')+' · Охват: '+Number(x.reach||0).toLocaleString('ru-RU')+'</div><div class="desc">'+esc(x.description||'')+'</div><button class="small-btn" data-approve-profile="'+Number(x.telegram_id)+'">Одобрить</button><button class="small-btn" style="margin-left:6px;border-color:#a44;color:#f99" data-reject-profile="'+Number(x.telegram_id)+'">Отклонить</button></div></article>').join(''):'<div class="empty">Новых заявок нет.</div>';
+    }catch(e){box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';}
   }
 
   function applyTelegramAccount(){
@@ -665,6 +679,15 @@
   document.addEventListener('click',async event=>{
     const gear=event.target.closest('[data-admin-menu]');
     if(gear){const type=gear.dataset.adminMenu,id=Number(gear.dataset.itemId);const menu=document.querySelector('[data-admin-menu-box="'+type+'-'+id+'"]');if(menu)menu.hidden=!menu.hidden;return;}
+    const approveProfile=event.target.closest('[data-approve-profile]');
+    const rejectProfile=event.target.closest('[data-reject-profile]');
+    if(approveProfile||rejectProfile){
+      const target=approveProfile||rejectProfile,id=Number(approveProfile?target.dataset.approveProfile:target.dataset.rejectProfile),status=approveProfile?'approved':'rejected';
+      if(!confirm(status==='approved'?'Одобрить этот профиль?':'Отклонить этот профиль?'))return;
+      try{await api('/api/admin/profiles/'+id+'/approval',{method:'PATCH',body:JSON.stringify({status})});notify(status==='approved'?'Профиль одобрен':'Профиль отклонён');await loadPendingProfiles();await loadBloggers();}
+      catch(error){notify('Не удалось изменить статус: '+error.message);}
+      return;
+    }
     const deleteProfile=event.target.closest('[data-delete-profile]');
     if(deleteProfile){const id=Number(deleteProfile.dataset.deleteProfile);if(!confirm('Удалить только этот профиль блогера / канала?'))return;try{await api('/api/admin/profiles/'+id,{method:'DELETE'});notify('Профиль удалён');await loadBloggers();}catch(error){notify('Не удалось удалить профиль: '+error.message);}return;}
     const deleteCompany=event.target.closest('[data-delete-company]');
