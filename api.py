@@ -470,7 +470,7 @@ class ProInvoiceRequest(BaseModel):
 async def create_pro_invoice(request: ProInvoiceRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
     if not CRYPTOPAY_TOKEN:
         raise HTTPException(503, "Crypto Pay не настроен на сервере")
-    payload = {"currency_type": "fiat", "fiat": "USD", "amount": "15",
+    payload = {"currency_type": "fiat", "fiat": "EUR", "amount": "5",
                "accepted_assets": request.asset, "description": "Creator Manager PRO — 30 дней",
                "payload": json.dumps({"user_id": telegram_id, "plan": "pro"}),
                "allow_comments": False, "allow_anonymous": False, "expires_in": 1800}
@@ -488,7 +488,7 @@ async def create_pro_invoice(request: ProInvoiceRequest, telegram_id: int = __im
 async def create_business_invoice(request: ProInvoiceRequest, telegram_id: int = __import__("fastapi").Depends(user_id)):
     if not CRYPTOPAY_TOKEN:
         raise HTTPException(503, "Crypto Pay не настроен на сервере")
-    payload = {"currency_type": "fiat", "fiat": "EUR", "amount": "100",
+    payload = {"currency_type": "fiat", "fiat": "EUR", "amount": "25",
                "accepted_assets": request.asset, "description": "Creator Manager Business — 30 дней",
                "payload": json.dumps({"user_id": telegram_id, "plan": "business"}),
                "allow_comments": False, "allow_anonymous": False, "expires_in": 1800}
