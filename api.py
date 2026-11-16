@@ -178,6 +178,15 @@ class AdminBloggerProfile(Profile):
 class AdminAdvertiserCampaign(Campaign):
     advertiser_telegram_id: int = Field(gt=0)
 
+class CompanyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    niche: str = Field(default="", max_length=80)
+    description: str = Field(default="", max_length=1500)
+    contact_type: str = Field(default="telegram", pattern="^(telegram|phone|email|website)$")
+    contact_value: str = Field(min_length=1, max_length=200)
+    website: str | None = Field(default=None, max_length=300)
+    logo_url: str | None = Field(default=None, max_length=500)
+
 class ApplicationRequest(BaseModel):
     message: str = Field(default="", max_length=1000)
 
@@ -256,6 +265,34 @@ async def admin_add_advertiser(campaign: AdminAdvertiserCampaign, init_data: str
     payload["contact_username"] = payload["contact_username"].lstrip("@")
     payload["advertiser_id"] = campaign.advertiser_telegram_id
     return await db_request("POST", "campaigns", payload=payload)
+
+@app.get("/api/companies")
+async def get_companies():
+    return await db_request("GET", "companies", params={
+        "select": "id,name,niche,description,contact_type,contact_value,website,logo_url,created_at",
+        "order": "created_at.desc",
+    })
+
+@app.post("/api/admin/companies")
+async def admin_add_company(company: CompanyCreate, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    payload = company.model_dump()
+    payload["created_by"] = ADMIN_TELEGRAM_ID
+    if payload["contact_type"] == "telegram":
+        payload["contact_value"] = payload["contact_value"].strip().lstrip("@")
+        if not re.fullmatch(r"[A-Za-z0-9_]{5,32}", payload["contact_value"]):
+            raise HTTPException(400, "Укажи корректный Telegram username")
+    elif payload["contact_type"] == "email":
+        if not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", payload["contact_value"]):
+            raise HTTPException(400, "Укажи корректный email")
+    elif payload["contact_type"] == "phone":
+        if not re.fullmatch(r"[+0-9()\\-\\s]{6,30}", payload["contact_value"]):
+            raise HTTPException(400, "Укажи корректный номер телефона")
+    elif payload["contact_type"] == "website":
+        if not re.match(r"^https?://", payload["contact_value"], re.I):
+            raise HTTPException(400, "Ссылка должна начинаться с https:// или http://")
+    return await db_request("POST", "companies", payload=payload)
 
 @app.get("/api/profile/me")
 async def get_my_profile(telegram_id: int = __import__("fastapi").Depends(user_id)):
