@@ -296,6 +296,16 @@ async def admin_add_company(company: CompanyCreate, init_data: str = Header(defa
             raise HTTPException(400, "Ссылка должна начинаться с https:// или http://")
     return await db_request("POST", "companies", payload=payload)
 
+@app.delete("/api/admin/profiles/{profile_id}")
+async def admin_delete_profile(profile_id: int, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
+    if not is_business_admin(init_data):
+        raise HTTPException(403, "Недостаточно прав")
+    rows = await db_request("GET", "bloggers", params={"select": "telegram_id", "telegram_id": f"eq.{profile_id}", "limit": "1"})
+    if not rows:
+        raise HTTPException(404, "Профиль не найден")
+    await db_request("DELETE", "bloggers", params={"telegram_id": f"eq.{profile_id}"}, prefer="return=minimal")
+    return {"ok": True}
+
 @app.delete("/api/admin/companies/{company_id}")
 async def admin_delete_company(company_id: int, init_data: str = Header(default="", alias="X-Telegram-Init-Data")):
     if not is_business_admin(init_data):
